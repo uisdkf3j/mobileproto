@@ -95,6 +95,7 @@
             height: 100%;
             touch-action: none;
             pointer-events: none;
+            z-index: 1;
         }
 
         #dragOverlay {
@@ -103,7 +104,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: 1000;
+            z-index: 2;
             touch-action: pan-y; /* Allow vertical scrolling */
         }
 
@@ -111,7 +112,7 @@
             position: relative;
         }
 
-        #section3 img {
+        #section3 img:not(.arrow-button) {
             position: absolute;
             top: 55px;
             left: 0;
@@ -119,6 +120,37 @@
             height: auto;
             object-fit: contain;
             z-index: 2;
+        }
+
+        #section3 .arrow-button {
+            position: absolute;
+            top: 50%;
+            width: 48px;
+            height: 48px;
+            transform: translateY(-50%);
+            z-index: 3;
+            cursor: pointer;
+            transition: transform 0.1s ease, right 0.3s ease, left 0.3s ease;
+            pointer-events: auto;
+        }
+
+        #section3 .arrow-button.right {
+            right: 20px;
+            left: auto;
+        }
+
+        #section3 .arrow-button.left {
+            left: 20px;
+            right: auto;
+            transform: translateY(-50%) rotate(180deg);
+        }
+
+        #section3 .arrow-button:active {
+            transform: translateY(-50%) scale(0.9);
+        }
+
+        #section3 .arrow-button.left:active {
+            transform: translateY(-50%) rotate(180deg) scale(0.9);
         }
 
         #section4 {
@@ -162,6 +194,7 @@
             <canvas id="renderCanvas"></canvas>
             <div id="dragOverlay"></div>
             <img src="./UI/section3_top_layout_groundfloor.png" alt="Section 3 Top Layout">
+            <img src="./UI/arrowbutton.png" alt="Arrow Button" class="arrow-button right" id="arrowButton">
         </section>
 
         <section id="section4">
@@ -175,6 +208,56 @@
             const canvas = document.getElementById('renderCanvas');
             const dragOverlay = document.getElementById('dragOverlay');
             const engine = new BABYLON.Engine(canvas, true);
+            const arrowButton = document.getElementById('arrowButton');
+            let groundFloorMesh; // Declare groundFloorMesh at a higher scope
+            let firstFloorMesh; // Declare firstFloorMesh at a higher scope
+            let isGroundFloorView = false;
+
+            // Arrow button click/tap handler
+            arrowButton.addEventListener('click', function() {
+                this.src = './UI/arrowbutton_active.png';
+                setTimeout(() => {
+                    this.src = './UI/arrowbutton.png';
+                }, 100);
+
+                if (!isGroundFloorView) {
+                    // Animate camera target to ground floor
+                    if (groundFloorMesh) {
+                        BABYLON.Animation.CreateAndStartAnimation(
+                            "cameraTargetSwitch",
+                            camera,
+                            "target",
+                            30,
+                            7,
+                            camera.target,
+                            groundFloorMesh.position,
+                            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                        );
+                    }
+                    // Move button to left side
+                    this.classList.remove('right');
+                    this.classList.add('left');
+                    isGroundFloorView = true;
+                } else {
+                    // Animate camera target back to first floor
+                    if (firstFloorMesh) {
+                        BABYLON.Animation.CreateAndStartAnimation(
+                            "cameraTargetSwitch",
+                            camera,
+                            "target",
+                            30,
+                            7,
+                            camera.target,
+                            firstFloorMesh.position,
+                            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                        );
+                    }
+                    // Move button to right side
+                    this.classList.remove('left');
+                    this.classList.add('right');
+                    isGroundFloorView = false;
+                }
+            });
 
             // Calculate and set the top image height CSS variable
             const topImage = document.querySelector('#section1 img:first-child');
@@ -188,8 +271,16 @@
             let isHorizontalDrag = false;
             let startY = 0;
             let camera;
+            let hasAnimatedCamera = false;
             let startTime = 0;
             const clickThreshold = 200; // milliseconds to distinguish between click and drag
+
+            // Camera inertia variables
+            let angularVelocity = 0;
+            const friction = 0.95; // Friction coefficient (0-1)
+            const minVelocity = 0.001; // Minimum velocity before stopping
+            let lastDragTime = 0;
+            let isInertiaActive = false;
 
             // Handle both mouse and touch events
             const startDrag = (e) => {
@@ -198,11 +289,21 @@
                 lastX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
                 startY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
                 startTime = Date.now();
+                lastDragTime = startTime;
+                angularVelocity = 0;
+                isInertiaActive = false;
             };
 
             const endDrag = (e) => {
                 const endTime = Date.now();
                 const duration = endTime - startTime;
+
+                if (isHorizontalDrag) {
+                    const timeDelta = endTime - lastDragTime;
+                    if (timeDelta > 0) {
+                        isInertiaActive = true;
+                    }
+                }
 
                 // Only check for mesh clicks if it was a quick tap/click (not a drag)
                 if (duration < clickThreshold && !isHorizontalDrag) {
@@ -234,6 +335,7 @@
                 
                 const currentX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
                 const currentY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+                const currentTime = Date.now();
                 
                 // Determine if this is a horizontal drag
                 if (!isHorizontalDrag) {
@@ -248,12 +350,18 @@
 
                 if (isHorizontalDrag) {
                     const deltaX = currentX - lastX;
+                    const timeDelta = currentTime - lastDragTime;
+                    
+                    if (timeDelta > 0) {
+                        // Calculate angular velocity (radians per millisecond)
+                        angularVelocity = (deltaX * 0.005) / timeDelta;
+                    }
+                    
                     // Update camera alpha (rotation around Y axis)
-                    // Convert pixel movement to radians (adjust sensitivity as needed)
-                    const rotationSensitivity = 0.005;
-                    camera.alpha -= deltaX * rotationSensitivity;
+                    camera.alpha -= deltaX * 0.005;
                     
                     lastX = currentX;
+                    lastDragTime = currentTime;
                     
                     // Prevent default only for horizontal drags
                     e.preventDefault();
@@ -276,7 +384,7 @@
                 scene.clearColor = new BABYLON.Color3(1, 1, 1);
 
                 // Camera
-                camera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 15, BABYLON.Vector3.Zero(), scene);
+                camera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 15, new BABYLON.Vector3(10, 4, 0), scene);
                 camera.attachControl(canvas, false);
                 
                 // Disable camera controls
@@ -285,11 +393,74 @@
                 // Light
                 const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
-                // Load 3D model
-                BABYLON.SceneLoader.ImportMeshAsync("", "./3D/", "hitboxes.glb", scene).then(function (result) {
-                    console.log("Model loaded successfully");
+                // Load first floor model (centered)
+                BABYLON.SceneLoader.ImportMeshAsync("", "./3D/", "firstfloor.glb", scene).then(function (result) {
+                    console.log("First floor model loaded successfully");
+                    firstFloorMesh = result.meshes[0];
                 }).catch(function(error) {
-                    console.error("Error loading model:", error);
+                    console.error("Error loading first floor model:", error);
+                });
+
+                // Load ground floor model (offset on X axis)
+                BABYLON.SceneLoader.ImportMeshAsync("", "./3D/", "groundfloor.glb", scene).then(function (result) {
+                    console.log("Ground floor model loaded successfully");
+                    groundFloorMesh = result.meshes[0];
+                    groundFloorMesh.position.x = 10;
+                    
+                    // Set initial camera position and target after ground floor loads
+                    camera.position = new BABYLON.Vector3(10, 12, -15);
+                    camera.setTarget(groundFloorMesh.position);
+                }).catch(function(error) {
+                    console.error("Error loading ground floor model:", error);
+                });
+
+                // Add intersection observer for section transitions
+                const section3 = document.getElementById('section3');
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting && !hasAnimatedCamera && groundFloorMesh && firstFloorMesh) {
+                            hasAnimatedCamera = true;
+                            
+                            // Animate camera position
+                            BABYLON.Animation.CreateAndStartAnimation(
+                                "cameraMove",
+                                camera,
+                                "position",
+                                30,
+                                30,
+                                camera.position,
+                                new BABYLON.Vector3(0, 12, -15),
+                                BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                            );
+
+                            // Animate camera target
+                            BABYLON.Animation.CreateAndStartAnimation(
+                                "cameraTarget",
+                                camera,
+                                "target",
+                                30,
+                                7,
+                                camera.target,
+                                firstFloorMesh.position,
+                                BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                            );
+                        }
+                    });
+                }, { threshold: 0.5 });
+
+                observer.observe(section3);
+
+                // Add before render observer for inertia
+                scene.onBeforeRenderObservable.add(() => {
+                    if (isInertiaActive && !isDragging) {
+                        camera.alpha -= angularVelocity * 16; // Assuming 60fps, multiply by ~16ms
+                        angularVelocity *= friction;
+                        
+                        if (Math.abs(angularVelocity) < minVelocity) {
+                            isInertiaActive = false;
+                            angularVelocity = 0;
+                        }
+                    }
                 });
 
                 return scene;
