@@ -112,7 +112,7 @@
             position: relative;
         }
 
-        #section3 img:not(.arrow-button):not(.room-button) {
+        #section3 img:not(.arrow-button):not(.room-button):not(.back-button) {
             position: absolute;
             top: 55px;
             left: 0;
@@ -186,12 +186,22 @@
         }
 
         #section3 .room-button {
-            height: 56px;
+            height: 48px;
             width: auto;
             display: inline-block;
             margin-right: 10px;
             vertical-align: top;
             cursor: pointer;
+            -webkit-tap-highlight-color: transparent;  /* Remove blue highlight on tap */
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            outline: none;
+        }
+
+        #section3 .room-button:focus {
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         #section3 .room-button:first-child {
@@ -200,6 +210,19 @@
 
         #section3 .room-button:last-child {
             margin-right: 20px;
+        }
+
+        #section3 .back-button {
+            position: absolute;
+            bottom: calc(max(30px, env(safe-area-inset-bottom, 30px)) + 66px);
+            left: 50%;
+            transform: translateX(-50%);
+            height: 37px; /* Reduced by 1.5x from 56px */
+            width: auto;
+            z-index: 3;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            display: none; /* Initially hidden */
         }
 
         #section4 {
@@ -244,7 +267,8 @@
             <div id="dragOverlay"></div>
             <img src="./UI/section3_top_layout_firstfloor.png" alt="Section 3 Top Layout" id="floorLayoutImage">
             <img src="./UI/arrowbutton.png" alt="Arrow Button" class="arrow-button right" id="arrowButton" draggable="false">
-            <div class="room-buttons-container">
+            <img src="./UI/back.png" alt="Back Button" class="back-button">
+            <div class="room-buttons-container" id="firstFloorButtons">
                 <img src="./UI/1_room1.png" alt="Room 1" class="room-button" data-active-src="./UI/1_room1_active.png" data-inactive-src="./UI/1_room1.png">
                 <img src="./UI/1_room2.png" alt="Room 2" class="room-button" data-active-src="./UI/1_room2_active.png" data-inactive-src="./UI/1_room2.png">
                 <img src="./UI/1_room3.png" alt="Room 3" class="room-button" data-active-src="./UI/1_room3_active.png" data-inactive-src="./UI/1_room3.png">
@@ -256,6 +280,17 @@
                 <img src="./UI/1_terrace.png" alt="Terrace" class="room-button" data-active-src="./UI/1_terrace_active.png" data-inactive-src="./UI/1_terrace.png">
                 <img src="./UI/1_wardrobe.png" alt="Wardrobe" class="room-button" data-active-src="./UI/1_wardrobe_active.png" data-inactive-src="./UI/1_wardrobe.png">
                 <img src="./UI/1_wc.png" alt="WC" class="room-button" data-active-src="./UI/1_wc_active.png" data-inactive-src="./UI/1_wc.png">
+            </div>
+            <div class="room-buttons-container" id="groundFloorButtons" style="display: none;">
+                <img src="./UI/0_room1.png" alt="Room 1" class="room-button" data-active-src="./UI/0_room1_active.png" data-inactive-src="./UI/0_room1.png">
+                <img src="./UI/0_room2.png" alt="Room 2" class="room-button" data-active-src="./UI/0_room2_active.png" data-inactive-src="./UI/0_room2.png">
+                <img src="./UI/0_room3.png" alt="Room 3" class="room-button" data-active-src="./UI/0_room3_active.png" data-inactive-src="./UI/0_room3.png">
+                <img src="./UI/0_room4.png" alt="Room 4" class="room-button" data-active-src="./UI/0_room4_active.png" data-inactive-src="./UI/0_room4.png">
+                <img src="./UI/0_room5.png" alt="Room 5" class="room-button" data-active-src="./UI/0_room5_active.png" data-inactive-src="./UI/0_room5.png">
+                <img src="./UI/0_garage.png" alt="Garage" class="room-button" data-active-src="./UI/0_garage_active.png" data-inactive-src="./UI/0_garage.png">
+                <img src="./UI/0_landing.png" alt="Landing" class="room-button" data-active-src="./UI/0_landing_active.png" data-inactive-src="./UI/0_landing.png">
+                <img src="./UI/0_utilityroom.png" alt="Utility Room" class="room-button" data-active-src="./UI/0_utilityroom_active.png" data-inactive-src="./UI/0_utilityroom.png">
+                <img src="./UI/0_wc.png" alt="WC" class="room-button" data-active-src="./UI/0_wc_active.png" data-inactive-src="./UI/0_wc.png">
             </div>
         </section>
 
@@ -272,7 +307,9 @@
             const engine = new BABYLON.Engine(canvas, true);
             const arrowButton = document.getElementById('arrowButton');
             const floorLayoutImage = document.getElementById('floorLayoutImage');
-            const roomButtons = document.querySelectorAll('.room-button');
+            const firstFloorButtons = document.getElementById('firstFloorButtons');
+            const groundFloorButtons = document.getElementById('groundFloorButtons');
+            const backButton = document.querySelector('.back-button');
             let activeButton = null;
             let groundFloorMesh; // Declare groundFloorMesh at a higher scope
             let firstFloorMesh; // Declare firstFloorMesh at a higher scope
@@ -280,35 +317,143 @@
             let hasCompletedInitialAnimation = false;
             let visibilityTimeout;
 
-            // Room button click handler
-            roomButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    if (activeButton === this) {
-                        // If clicking the active button, deactivate it
-                        this.src = this.dataset.inactiveSrc;
-                        activeButton = null;
-                    } else {
-                        // Deactivate the currently active button if there is one
-                        if (activeButton) {
-                            activeButton.src = activeButton.dataset.inactiveSrc;
-                        }
-                        // Activate the clicked button
-                        this.src = this.dataset.activeSrc;
-                        activeButton = this;
+            // Back button click handler
+            backButton.addEventListener('click', function() {
+                console.log('Back button clicked');
+                if (activeButton) {
+                    console.log('Deactivating button:', activeButton.alt);
+                    activeButton.src = activeButton.dataset.inactiveSrc;
+                    activeButton = null;
+                    backButton.style.display = 'none';
+                    arrowButton.style.display = 'block'; // Show arrow button when deactivating room
+                    
+                    // Reset camera target based on current floor
+                    const targetMesh = isGroundFloorView ? groundFloorMesh : firstFloorMesh;
+                    if (targetMesh) {
+                        console.log('Target mesh position:', {
+                            x: targetMesh.position.x,
+                            y: targetMesh.position.y,
+                            z: targetMesh.position.z
+                        });
+                        BABYLON.Animation.CreateAndStartAnimation(
+                            "cameraTargetRoom",
+                            camera,
+                            "target",
+                            30,
+                            7,
+                            camera.target,
+                            targetMesh.position,
+                            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                        );
                     }
-                });
+                    } else {
+                        console.warn('Target mesh not found for camera reset');
+                }
             });
+
+            // Room button click handler for both floors
+            const setupRoomButtons = (container) => {
+                const buttons = container.querySelectorAll('.room-button');
+                buttons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        console.log('Room button clicked:', this.alt);
+                        if (activeButton === this) {
+                            // If clicking the active button, deactivate it
+                            console.log('Deactivating current button:', this.alt);
+                            this.src = this.dataset.inactiveSrc;
+                            activeButton = null;
+                            backButton.style.display = 'none';
+                            arrowButton.style.display = 'block';
+                            
+                            // Reset camera target based on current floor
+                            const targetMesh = isGroundFloorView ? groundFloorMesh : firstFloorMesh;
+                            if (targetMesh) {
+                                console.log('Resetting camera target to floor mesh:', isGroundFloorView ? 'ground floor' : 'first floor');
+                                BABYLON.Animation.CreateAndStartAnimation(
+                                    "cameraTargetReset",
+                                    camera,
+                                    "target",
+                                    30,
+                                    7,
+                                    camera.target,
+                                    targetMesh.position,
+                                    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                                );
+                            } else {
+                                console.warn('Target mesh not found for camera reset');
+                            }
+                        } else {
+                            // Deactivate the currently active button if there is one
+                            if (activeButton) {
+                                console.log('Deactivating previous button:', activeButton.alt);
+                                activeButton.src = activeButton.dataset.inactiveSrc;
+                            }
+                            // Activate the clicked button
+                            console.log('Activating new button:', this.alt);
+                            this.src = this.dataset.activeSrc;
+                            activeButton = this;
+                            backButton.style.display = 'block';
+                            arrowButton.style.display = 'none';
+                            
+                            // Get the room mesh name from the button's image src
+                            const imgSrc = this.src;
+                            const meshName = imgSrc.split('/').pop().split('_active.png')[0];
+                            console.log('Looking for mesh with name:', meshName);
+                            
+                            // Find the corresponding mesh in the scene
+                            const targetMesh = scene.getMeshByName(meshName);
+                            if (targetMesh) {
+                                console.log('Found target mesh:', meshName);
+                                const xOffset = meshName.startsWith('0') ? 30 : 0;
+                                const invertedPosition = new BABYLON.Vector3(
+                                    -targetMesh.position.x + xOffset,
+                                    targetMesh.position.y,
+                                    targetMesh.position.z
+                                );
+                                BABYLON.Animation.CreateAndStartAnimation(
+                                    "cameraTargetRoom",
+                                    camera,
+                                    "target",
+                                    30,
+                                    7,
+                                    camera.target,
+                                    invertedPosition,
+                                    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                                );
+                            } else {
+                                console.warn('Target mesh not found:', meshName);
+                            }
+                        }
+                    });
+                });
+            };
+
+            // Set up room buttons for both floors
+            setupRoomButtons(firstFloorButtons);
+            setupRoomButtons(groundFloorButtons);
 
             // Arrow button click/tap handler
             arrowButton.addEventListener('click', function() {
+                console.log('Arrow button clicked, current floor:', isGroundFloorView ? 'ground' : 'first');
                 this.src = './UI/arrowbutton_active.png';
                 setTimeout(() => {
                     this.src = './UI/arrowbutton.png';
                 }, 100);
 
+                // Reset any active button state
+                if (activeButton) {
+                    console.log('Deactivating active button:', activeButton.alt);
+                    activeButton.src = activeButton.dataset.inactiveSrc;
+                    activeButton = null;
+                    backButton.style.display = 'none';
+                    arrowButton.style.display = 'block';
+                }
+
                 if (!isGroundFloorView) {
-                    // Animate camera target to ground floor
+                    // Switch to ground floor
+                    console.log('Switching to ground floor');
                     if (groundFloorMesh) {
+                        console.log('Animating camera to ground floor mesh');
                         BABYLON.Animation.CreateAndStartAnimation(
                             "cameraTargetSwitch",
                             camera,
@@ -320,24 +465,27 @@
                             BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                         );
                         
-                        // Make ground floor visible immediately
                         groundFloorMesh.setEnabled(true);
-                        // Set timeout to hide first floor after 1 second
                         clearTimeout(visibilityTimeout);
                         visibilityTimeout = setTimeout(() => {
                             firstFloorMesh.setEnabled(false);
+                            console.log('First floor mesh hidden');
                         }, 200);
                         
-                        // Update floor layout image
                         floorLayoutImage.src = './UI/section3_top_layout_groundfloor.png';
+                        firstFloorButtons.style.display = 'none';
+                        groundFloorButtons.style.display = 'block';
+                    } else {
+                        console.warn('Ground floor mesh not found');
                     }
-                    // Move button to left side
                     this.classList.remove('right');
                     this.classList.add('left');
                     isGroundFloorView = true;
                 } else {
-                    // Animate camera target back to first floor
+                    // Switch to first floor
+                    console.log('Switching to first floor');
                     if (firstFloorMesh) {
+                        console.log('Animating camera to first floor mesh');
                         BABYLON.Animation.CreateAndStartAnimation(
                             "cameraTargetSwitch",
                             camera,
@@ -349,18 +497,19 @@
                             BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                         );
                         
-                        // Make first floor visible immediately
                         firstFloorMesh.setEnabled(true);
-                        // Set timeout to hide ground floor after 1 second
                         clearTimeout(visibilityTimeout);
                         visibilityTimeout = setTimeout(() => {
                             groundFloorMesh.setEnabled(false);
+                            console.log('Ground floor mesh hidden');
                         }, 200);
                         
-                        // Update floor layout image
                         floorLayoutImage.src = './UI/section3_top_layout_firstfloor.png';
+                        groundFloorButtons.style.display = 'none';
+                        firstFloorButtons.style.display = 'block';
+                    } else {
+                        console.warn('First floor mesh not found');
                     }
-                    // Move button to right side
                     this.classList.remove('left');
                     this.classList.add('right');
                     isGroundFloorView = false;
@@ -528,6 +677,7 @@
                 const observer = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
                         if (entry.isIntersecting && !hasAnimatedCamera && groundFloorMesh && firstFloorMesh) {
+                            console.log('Section 3 visible, starting initial animation');
                             hasAnimatedCamera = true;
                             
                             // Make both models visible for initial animation
@@ -582,6 +732,7 @@
                     }
                 });
 
+               
                 return scene;
             }
 
