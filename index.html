@@ -120,6 +120,7 @@
             height: auto;
             object-fit: contain;
             z-index: 2;
+            -webkit-tap-highlight-color: transparent;  /* Remove blue highlight on tap */
         }
 
         #section3 .arrow-button {
@@ -132,25 +133,39 @@
             cursor: pointer;
             transition: transform 0.1s ease, right 0.3s ease, left 0.3s ease;
             pointer-events: auto;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            outline: none;
+        }
+
+        #section3 .arrow-button:focus {
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         #section3 .arrow-button.right {
             right: 20px;
             left: auto;
+            -webkit-tap-highlight-color: transparent;  /* Remove blue highlight on tap */
         }
 
         #section3 .arrow-button.left {
             left: 20px;
             right: auto;
             transform: translateY(-50%) rotate(180deg);
+            -webkit-tap-highlight-color: transparent;  /* Remove blue highlight on tap */
         }
 
         #section3 .arrow-button:active {
             transform: translateY(-50%) scale(0.9);
+            -webkit-tap-highlight-color: transparent;  /* Remove blue highlight on tap */
         }
 
         #section3 .arrow-button.left:active {
             transform: translateY(-50%) rotate(180deg) scale(0.9);
+            -webkit-tap-highlight-color: transparent;  /* Remove blue highlight on tap */
         }
 
         #section4 {
@@ -194,7 +209,7 @@
             <canvas id="renderCanvas"></canvas>
             <div id="dragOverlay"></div>
             <img src="./UI/section3_top_layout_groundfloor.png" alt="Section 3 Top Layout">
-            <img src="./UI/arrowbutton.png" alt="Arrow Button" class="arrow-button right" id="arrowButton">
+            <img src="./UI/arrowbutton.png" alt="Arrow Button" class="arrow-button right" id="arrowButton" draggable="false">
         </section>
 
         <section id="section4">
