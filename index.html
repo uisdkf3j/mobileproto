@@ -112,7 +112,7 @@
             position: relative;
         }
 
-        #section3 img:not(.arrow-button) {
+        #section3 img:not(.arrow-button):not(.room-button) {
             position: absolute;
             top: 55px;
             left: 0;
@@ -168,6 +168,40 @@
             -webkit-tap-highlight-color: transparent;  /* Remove blue highlight on tap */
         }
 
+        #section3 .room-buttons-container {
+            position: absolute;
+            bottom: max(30px, env(safe-area-inset-bottom, 30px));
+            left: 0;
+            right: 0;
+            height: 56px;
+            overflow-x: auto;
+            white-space: nowrap;
+            z-index: 3;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE and Edge */
+        }
+
+        #section3 .room-buttons-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari and Opera */
+        }
+
+        #section3 .room-button {
+            height: 56px;
+            width: auto;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: top;
+            cursor: pointer;
+        }
+
+        #section3 .room-button:first-child {
+            margin-left: 20px;
+        }
+
+        #section3 .room-button:last-child {
+            margin-right: 20px;
+        }
+
         #section4 {
             background-color: #ffffff;
             position: relative;
@@ -208,8 +242,21 @@
         <section id="section3">
             <canvas id="renderCanvas"></canvas>
             <div id="dragOverlay"></div>
-            <img src="./UI/section3_top_layout_groundfloor.png" alt="Section 3 Top Layout">
+            <img src="./UI/section3_top_layout_firstfloor.png" alt="Section 3 Top Layout" id="floorLayoutImage">
             <img src="./UI/arrowbutton.png" alt="Arrow Button" class="arrow-button right" id="arrowButton" draggable="false">
+            <div class="room-buttons-container">
+                <img src="./UI/1_room1.png" alt="Room 1" class="room-button" data-active-src="./UI/1_room1_active.png" data-inactive-src="./UI/1_room1.png">
+                <img src="./UI/1_room2.png" alt="Room 2" class="room-button" data-active-src="./UI/1_room2_active.png" data-inactive-src="./UI/1_room2.png">
+                <img src="./UI/1_room3.png" alt="Room 3" class="room-button" data-active-src="./UI/1_room3_active.png" data-inactive-src="./UI/1_room3.png">
+                <img src="./UI/1_kitchen.png" alt="Kitchen" class="room-button" data-active-src="./UI/1_kitchen_active.png" data-inactive-src="./UI/1_kitchen.png">
+                <img src="./UI/1_bathroom1.png" alt="Bathroom 1" class="room-button" data-active-src="./UI/1_bathroom1_active.png" data-inactive-src="./UI/1_bathroom1.png">
+                <img src="./UI/1_bathroom2.png" alt="Bathroom 2" class="room-button" data-active-src="./UI/1_bathroom2_active.png" data-inactive-src="./UI/1_bathroom2.png">
+                <img src="./UI/1_landing.png" alt="Landing" class="room-button" data-active-src="./UI/1_landing_active.png" data-inactive-src="./UI/1_landing.png">
+                <img src="./UI/1_sunroom.png" alt="Sunroom" class="room-button" data-active-src="./UI/1_sunroom_active.png" data-inactive-src="./UI/1_sunroom.png">
+                <img src="./UI/1_terrace.png" alt="Terrace" class="room-button" data-active-src="./UI/1_terrace_active.png" data-inactive-src="./UI/1_terrace.png">
+                <img src="./UI/1_wardrobe.png" alt="Wardrobe" class="room-button" data-active-src="./UI/1_wardrobe_active.png" data-inactive-src="./UI/1_wardrobe.png">
+                <img src="./UI/1_wc.png" alt="WC" class="room-button" data-active-src="./UI/1_wc_active.png" data-inactive-src="./UI/1_wc.png">
+            </div>
         </section>
 
         <section id="section4">
@@ -224,9 +271,33 @@
             const dragOverlay = document.getElementById('dragOverlay');
             const engine = new BABYLON.Engine(canvas, true);
             const arrowButton = document.getElementById('arrowButton');
+            const floorLayoutImage = document.getElementById('floorLayoutImage');
+            const roomButtons = document.querySelectorAll('.room-button');
+            let activeButton = null;
             let groundFloorMesh; // Declare groundFloorMesh at a higher scope
             let firstFloorMesh; // Declare firstFloorMesh at a higher scope
             let isGroundFloorView = false;
+            let hasCompletedInitialAnimation = false;
+            let visibilityTimeout;
+
+            // Room button click handler
+            roomButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    if (activeButton === this) {
+                        // If clicking the active button, deactivate it
+                        this.src = this.dataset.inactiveSrc;
+                        activeButton = null;
+                    } else {
+                        // Deactivate the currently active button if there is one
+                        if (activeButton) {
+                            activeButton.src = activeButton.dataset.inactiveSrc;
+                        }
+                        // Activate the clicked button
+                        this.src = this.dataset.activeSrc;
+                        activeButton = this;
+                    }
+                });
+            });
 
             // Arrow button click/tap handler
             arrowButton.addEventListener('click', function() {
@@ -248,6 +319,17 @@
                             groundFloorMesh.position,
                             BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                         );
+                        
+                        // Make ground floor visible immediately
+                        groundFloorMesh.setEnabled(true);
+                        // Set timeout to hide first floor after 1 second
+                        clearTimeout(visibilityTimeout);
+                        visibilityTimeout = setTimeout(() => {
+                            firstFloorMesh.setEnabled(false);
+                        }, 200);
+                        
+                        // Update floor layout image
+                        floorLayoutImage.src = './UI/section3_top_layout_groundfloor.png';
                     }
                     // Move button to left side
                     this.classList.remove('right');
@@ -266,6 +348,17 @@
                             firstFloorMesh.position,
                             BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                         );
+                        
+                        // Make first floor visible immediately
+                        firstFloorMesh.setEnabled(true);
+                        // Set timeout to hide ground floor after 1 second
+                        clearTimeout(visibilityTimeout);
+                        visibilityTimeout = setTimeout(() => {
+                            groundFloorMesh.setEnabled(false);
+                        }, 200);
+                        
+                        // Update floor layout image
+                        floorLayoutImage.src = './UI/section3_top_layout_firstfloor.png';
                     }
                     // Move button to right side
                     this.classList.remove('left');
@@ -399,7 +492,7 @@
                 scene.clearColor = new BABYLON.Color3(1, 1, 1);
 
                 // Camera
-                camera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 15, new BABYLON.Vector3(10, 4, 0), scene);
+                camera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 30, new BABYLON.Vector3(30, 15, 0), scene);
                 camera.attachControl(canvas, false);
                 
                 // Disable camera controls
@@ -420,10 +513,11 @@
                 BABYLON.SceneLoader.ImportMeshAsync("", "./3D/", "groundfloor.glb", scene).then(function (result) {
                     console.log("Ground floor model loaded successfully");
                     groundFloorMesh = result.meshes[0];
-                    groundFloorMesh.position.x = 10;
+                    groundFloorMesh.position.x = 30;
+                    groundFloorMesh.setEnabled(false); // Initially hide ground floor
                     
                     // Set initial camera position and target after ground floor loads
-                    camera.position = new BABYLON.Vector3(10, 12, -15);
+                    camera.position = new BABYLON.Vector3(30, 15, -15);
                     camera.setTarget(groundFloorMesh.position);
                 }).catch(function(error) {
                     console.error("Error loading ground floor model:", error);
@@ -436,6 +530,10 @@
                         if (entry.isIntersecting && !hasAnimatedCamera && groundFloorMesh && firstFloorMesh) {
                             hasAnimatedCamera = true;
                             
+                            // Make both models visible for initial animation
+                            groundFloorMesh.setEnabled(true);
+                            firstFloorMesh.setEnabled(true);
+                            
                             // Animate camera position
                             BABYLON.Animation.CreateAndStartAnimation(
                                 "cameraMove",
@@ -444,7 +542,7 @@
                                 30,
                                 30,
                                 camera.position,
-                                new BABYLON.Vector3(0, 12, -15),
+                                new BABYLON.Vector3(0, 15, -15),
                                 BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                             );
 
@@ -459,6 +557,12 @@
                                 firstFloorMesh.position,
                                 BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                             );
+
+                            // After initial animation completes, hide ground floor
+                            setTimeout(() => {
+                                hasCompletedInitialAnimation = true;
+                                groundFloorMesh.setEnabled(false);
+                            }, 1000);
                         }
                     });
                 }, { threshold: 0.5 });
