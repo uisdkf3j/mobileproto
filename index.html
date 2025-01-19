@@ -120,6 +120,28 @@
             object-fit: contain;
             z-index: 2;
         }
+
+        #section4 {
+            background-color: #ffffff;
+            position: relative;
+        }
+
+        #section4 img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            align-self: flex-start;
+            margin-top: 55px;
+        }
+
+        #section4 .section4_floater {
+            position: absolute;
+            bottom: max(30px, env(safe-area-inset-bottom, 30px));
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            height: auto;
+        }
     </style>
 </head>
 <body>
@@ -140,6 +162,11 @@
             <canvas id="renderCanvas"></canvas>
             <div id="dragOverlay"></div>
             <img src="./UI/section3_top_layout_groundfloor.png" alt="Section 3 Top Layout">
+        </section>
+
+        <section id="section4">
+            <img src="./UI/section4_top.png" alt="Section 4 Top image">
+            <img src="./UI/section4_floater.png" alt="Section 4 Floating image" class="section4_floater">
         </section>
     </div>
 
