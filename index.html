@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Mobile BabylonJS Demo</title>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
@@ -51,7 +51,7 @@
 
         #section1 .floater1 {
             position: absolute;
-            bottom: 70px;
+            bottom: max(30px, env(safe-area-inset-bottom, 30px));
             right: 20px;
             width: 48px;
             height: 48px;
@@ -59,7 +59,7 @@
 
         #section1 .floater2 {
             position: absolute;
-            bottom: 70px;
+            bottom: max(30px, env(safe-area-inset-bottom, 30px));
             left: 20px;
             width: 80px;
             height: 8px;
@@ -81,7 +81,7 @@
 
         #section2 .section2_floater {
             position: absolute;
-            bottom: 70px;
+            bottom: max(30px, env(safe-area-inset-bottom, 30px));
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
@@ -273,8 +273,26 @@
             });
 
             window.addEventListener('resize', function() {
+                // Existing resize handler for the engine
                 engine.resize();
+                
+                // Force layout recalculation for safe areas
+                document.documentElement.style.setProperty('--dummy', 'none');
+                setTimeout(() => {
+                    document.documentElement.style.removeProperty('--dummy');
+                }, 0);
             });
+
+            // Some browsers also support this event for safe area changes
+            if ('ondeviceinfochange' in window) {
+                window.addEventListener('deviceinfochange', function() {
+                    // Force layout recalculation
+                    document.documentElement.style.setProperty('--dummy', 'none');
+                    setTimeout(() => {
+                        document.documentElement.style.removeProperty('--dummy');
+                    }, 0);
+                });
+            }
         });
     </script>
 </body>
