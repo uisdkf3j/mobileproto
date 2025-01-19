@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive 3D Sections</title>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <style>
+        /* CSS Variables */
+        :root {
+            --section-height: 100vh;
+            --section-bg: #ffffff;
+            --font-size-range: clamp(1.5rem, 4vw, 2.5rem);
+        }
+
+        /* Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Base Styles */
+        body {
+            height: 100%;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Scroll Container */
+        .scroll-container {
+            height: var(--section-height);
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            position: relative;
+        }
+
+        /* Add this new CSS rule to make scrolling faster */
+        @media (prefers-reduced-motion: no-preference) {
+            .scroll-container {
+                scroll-timeline: --scrollTimeline vertical;
+                animation: scroll 100ms ease-out;
+            }
+        }
+
+        @keyframes scroll {
+            from {
+                scroll-timeline-name: none;
+            }
+            to {
+                scroll-timeline-name: --scrollTimeline;
+            }
+        }
+
+        /* Section Styles */
+        .scroll-section {
+            height: var(--section-height);
+            scroll-snap-align: start;
+            background-color: var(--section-bg);
+            display: grid;
+            place-items: center;
+            font-size: var(--font-size-range);
+            position: relative;
+        }
+
+        /* Scene-specific Styles */
+        .scene-section {
+            padding: 0;
+            position: relative;
+        }
+
+        .scene-canvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+
+        /* Interactive Layers */
+        .touch-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            pointer-events: auto;
+            touch-action: none;
+        }
+
+        .touch-layer.disabled {
+            display: none;
+        }
+
+        .section-overlay {
+            position: absolute;
+            inset: 0;
+            background: transparent;
+            z-index: 2;
+        }
+
+        #renderCanvas {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.1s ease;
+            touch-action: none;
+        }
+
+        #renderCanvas.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <main class="scroll-container" id="mainContainer">
+        <article class="scroll-section" data-section="welcome">
+            Welcome
+            <div class="section-overlay" data-section="0"></div>
+        </article>
+        <article class="scroll-section" data-section="instructions">
+            Interact Below
+            <div class="section-overlay" data-section="1"></div>
+        </article>
+        <article class="scroll-section scene-section" data-section="interactive">
+            <div class="touch-layer"></div>
+            <canvas class="scene-canvas"></canvas>
+            <div class="section-overlay" data-section="2"></div>
+        </article>
+        <article class="scroll-section" data-section="additional-1">
+            <div class="section-overlay" data-section="3"></div>
+        </article>
+        <article class="scroll-section" data-section="additional-2">
+            <div class="section-overlay" data-section="4"></div>
+        </article>
+        <article class="scroll-section" data-section="completion">
+            Complete!
+            <div class="section-overlay" data-section="5"></div>
+        </article>
+        <canvas id="renderCanvas"></canvas>
+    </main>
+
+    <script>
+        (() => {
+            class InteractiveScene {
+                constructor() {
+                    this.state = {
+                        currentSection: 0,
+                        isInitialized: false,
+                        babylonScene: null,
+                        shapes: {},
+                        alpha: 0,
+                        isDragging: false,
+                        startX: 0,
+                        currentX: 0,
+                        dragAlpha: 0
+                    };
+                    
+                    this.init();
+                }
+
+                init() {
+                    if (this.state.isInitialized) return;
+                    
+                    this.initializeElements();
+                    this.initBabylonScene();
+                    this.bindEvents();
+                    this.state.isInitialized = true;
+                }
+
+                initializeElements() {
+                    this.elements = {
+                        container: document.querySelector('.scroll-container'),
+                        sceneSection: document.querySelector('.scene-section'),
+                        overlays: document.querySelectorAll('.section-overlay'),
+                        renderCanvas: document.querySelector('#renderCanvas'),
+                        sections: document.querySelectorAll('.scroll-section')
+                    };
+                }
+                initBabylonScene() {
+                    const engine = new BABYLON.Engine(this.elements.renderCanvas, true);
+                    const scene = new BABYLON.Scene(engine);
+                    
+                    // Set background color to white
+                    scene.clearColor = new BABYLON.Color3(1, 1, 1);
+                    
+                    // Create an arc rotate camera
+                    const camera = new BABYLON.ArcRotateCamera("camera1", 0, Math.PI / 3, 10, BABYLON.Vector3.Zero(), scene);
+                    
+                    // Add a hemispheric light for ambient illumination
+                    const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+                    light.intensity = 0.7;
+                    
+                    // Create shapes for different sections
+                    this.state.shapes = {
+                        cube: BABYLON.MeshBuilder.CreateBox("cube", {size: 2}, scene),
+                        cylinder: BABYLON.MeshBuilder.CreateCylinder("cylinder", {height: 2, diameter: 2}, scene),
+                        sphere: BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2}, scene)
+                    };
+
+                    // Initially hide cylinder and sphere
+                    this.state.shapes.cylinder.setEnabled(false);
+                    this.state.shapes.sphere.setEnabled(false);
+
+                    engine.runRenderLoop(() => {
+                        // Animate camera alpha
+                        this.state.alpha += 0.01;
+                        camera.alpha = this.state.alpha + this.state.dragAlpha;
+                        
+                        scene.render();
+                    });
+
+                    // Handle window resize
+                    window.addEventListener('resize', () => {
+                        engine.resize();
+                    });
+
+                    this.state.babylonScene = scene;
+                }
+
+                getSectionHeight() {
+                    return window.innerHeight;
+                }
+
+                updateCurrentSection() {
+                    const scrollTop = this.elements.container.scrollTop;
+                    const sectionHeight = this.getSectionHeight();
+                    return Math.floor(scrollTop / sectionHeight);
+                }
+
+                toggleBabylonScene(show) {
+                    this.elements.renderCanvas.classList.toggle('visible', show);
+                }
+
+                handleScroll = () => {
+                    const previousSection = this.state.currentSection;
+                    this.state.currentSection = this.updateCurrentSection();
+
+                    if (previousSection !== this.state.currentSection) {
+                        this.handleSectionChange();
+                    }
+                }
+
+                handleSectionChange() {
+                    const section = this.state.currentSection;
+                    
+                    // Show Babylon scene for sections 2-4
+                    this.toggleBabylonScene(section >= 2 && section <= 4);
+
+                    // Update visible shape based on section
+                    if (this.state.shapes) {
+                        this.state.shapes.cube.setEnabled(section === 2);
+                        this.state.shapes.cylinder.setEnabled(section === 3);
+                        this.state.shapes.sphere.setEnabled(section === 4);
+                    }
+
+                    // Emit custom event for section change
+                    const event = new CustomEvent('sectionChange', {
+                        detail: { section, element: this.elements.sections[section] }
+                    });
+                    document.dispatchEvent(event);
+                }
+
+                handleOverlayInteraction = (e) => {
+                    const section = e.target.dataset.section;
+                    const sectionElement = this.elements.sections[section];
+                    
+                    const event = new CustomEvent('overlayInteraction', {
+                        detail: { section, element: sectionElement }
+                    });
+                    document.dispatchEvent(event);
+                }
+
+                handleDragStart = (e) => {
+                    this.state.isDragging = true;
+                    this.state.startX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX;
+                }
+
+                handleDragMove = (e) => {
+                    if (!this.state.isDragging) return;
+                    
+                    this.state.currentX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX;
+                    const dragDistance = this.state.currentX - this.state.startX;
+                    
+                    // Convert drag distance to radians (scale down the movement)
+                    this.state.dragAlpha = dragDistance * -0.01;
+                }
+
+                handleDragEnd = () => {
+                    this.state.isDragging = false;
+                    // Add the final drag alpha to the base alpha
+                    this.state.alpha += this.state.dragAlpha;
+                    this.state.dragAlpha = 0;
+                }
+
+                bindEvents() {
+                    // Debounced scroll handler
+                    let scrollTimeout;
+                    this.elements.container.addEventListener('scroll', () => {
+                        clearTimeout(scrollTimeout);
+                        scrollTimeout = setTimeout(this.handleScroll, 10);
+                    });
+
+                    // Overlay interaction events with event delegation
+                    this.elements.container.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('section-overlay')) {
+                            this.handleOverlayInteraction(e);
+                        }
+                    });
+
+                    // Mouse drag events
+                    document.addEventListener('mousedown', this.handleDragStart);
+                    document.addEventListener('mousemove', this.handleDragMove);
+                    document.addEventListener('mouseup', this.handleDragEnd);
+
+                    // Touch drag events
+                    document.addEventListener('touchstart', this.handleDragStart, { passive: true });
+                    document.addEventListener('touchmove', this.handleDragMove, { passive: true });
+                    document.addEventListener('touchend', this.handleDragEnd);
+
+                    // Window resize handler
+                    window.addEventListener('resize', () => {
+                        this.handleScroll();
+                    });
+                }
+            }
+
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => new InteractiveScene());
+            } else {
+                new InteractiveScene();
+            }
+        })();
+    </script>
+</body>
+</html>
