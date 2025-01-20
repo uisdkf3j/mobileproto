@@ -648,10 +648,10 @@
                     const timeDelta = currentTime - lastDragTime;
                     
                     if (timeDelta > 0) {
-                        angularVelocity = (deltaX * 0.015) / timeDelta;
+                        angularVelocity = (deltaX * 0.010) / timeDelta;
                     }
                     
-                    camera.alpha -= deltaX * 0.015;
+                    camera.alpha -= deltaX * 0.008;
                     
                     lastX = currentX;
                     lastDragTime = currentTime;
