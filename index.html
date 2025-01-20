@@ -304,7 +304,9 @@
         window.addEventListener('DOMContentLoaded', function() {
             const canvas = document.getElementById('renderCanvas');
             const dragOverlay = document.getElementById('dragOverlay');
-            const engine = new BABYLON.Engine(canvas, true);
+            // Increase canvas scale for better resolution on high DPI devices
+            const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+            engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
             const arrowButton = document.getElementById('arrowButton');
             const floorLayoutImage = document.getElementById('floorLayoutImage');
             const firstFloorButtons = document.getElementById('firstFloorButtons');
