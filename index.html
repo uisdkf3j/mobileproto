@@ -311,8 +311,8 @@
             const groundFloorButtons = document.getElementById('groundFloorButtons');
             const backButton = document.querySelector('.back-button');
             let activeButton = null;
-            let groundFloorMesh; // Declare groundFloorMesh at a higher scope
-            let firstFloorMesh; // Declare firstFloorMesh at a higher scope
+            let groundFloorMesh; 
+            let firstFloorMesh;
             let isGroundFloorView = false;
             let hasCompletedInitialAnimation = false;
             let visibilityTimeout;
@@ -325,9 +325,8 @@
                     activeButton.src = activeButton.dataset.inactiveSrc;
                     activeButton = null;
                     backButton.style.display = 'none';
-                    arrowButton.style.display = 'block'; // Show arrow button when deactivating room
+                    arrowButton.style.display = 'block';
                     
-                    // Reset camera target based on current floor
                     const targetMesh = isGroundFloorView ? groundFloorMesh : firstFloorMesh;
                     if (targetMesh) {
                         console.log('Target mesh position:', {
@@ -345,7 +344,8 @@
                             targetMesh.position,
                             BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                         );
-                    }
+                        camera.radius = 15; // Default radius when no room is selected
+                     }
                     } else {
                         console.warn('Target mesh not found for camera reset');
                 }
@@ -358,14 +358,12 @@
                     button.addEventListener('click', function() {
                         console.log('Room button clicked:', this.alt);
                         if (activeButton === this) {
-                            // If clicking the active button, deactivate it
                             console.log('Deactivating current button:', this.alt);
                             this.src = this.dataset.inactiveSrc;
                             activeButton = null;
                             backButton.style.display = 'none';
                             arrowButton.style.display = 'block';
                             
-                            // Reset camera target based on current floor
                             const targetMesh = isGroundFloorView ? groundFloorMesh : firstFloorMesh;
                             if (targetMesh) {
                                 console.log('Resetting camera target to floor mesh:', isGroundFloorView ? 'ground floor' : 'first floor');
@@ -379,28 +377,25 @@
                                     targetMesh.position,
                                     BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                                 );
+                                camera.radius = 15; // Default radius when no room is selected
                             } else {
                                 console.warn('Target mesh not found for camera reset');
                             }
                         } else {
-                            // Deactivate the currently active button if there is one
                             if (activeButton) {
                                 console.log('Deactivating previous button:', activeButton.alt);
                                 activeButton.src = activeButton.dataset.inactiveSrc;
                             }
-                            // Activate the clicked button
                             console.log('Activating new button:', this.alt);
                             this.src = this.dataset.activeSrc;
                             activeButton = this;
                             backButton.style.display = 'block';
                             arrowButton.style.display = 'none';
                             
-                            // Get the room mesh name from the button's image src
                             const imgSrc = this.src;
                             const meshName = imgSrc.split('/').pop().split('_active.png')[0];
                             console.log('Looking for mesh with name:', meshName);
                             
-                            // Find the corresponding mesh in the scene
                             const targetMesh = scene.getMeshByName(meshName);
                             if (targetMesh) {
                                 console.log('Found target mesh:', meshName);
@@ -420,6 +415,32 @@
                                     invertedPosition,
                                     BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                                 );
+                                
+                                // Set camera radius based on the room
+                                const radiusMap = {
+                                    "0_garage": 6,
+                                    "0_landing": 5,
+                                    "0_room1": 4,
+                                    "0_room2": 4,
+                                    "0_room3": 4.5,
+                                    "0_room4": 5,
+                                    "0_room5": 4,
+                                    "0_utilityroom": 4,
+                                    "0_wc": 3,
+                                    "1_bathroom1": 3.5,
+                                    "1_bathroom2": 3.5,
+                                    "1_kitchen": 4.5,
+                                    "1_landing": 4.5,
+                                    "1_room1": 4.5,
+                                    "1_room2": 4,
+                                    "1_room3": 4,
+                                    "1_sunroom": 4.5,
+                                    "1_terrace": 6,
+                                    "1_wardrobe": 3,
+                                    "1_wc": 3
+                                };
+                                camera.radius = radiusMap[meshName] || 15; // Default radius if not found
+                                
                             } else {
                                 console.warn('Target mesh not found:', meshName);
                             }
@@ -428,11 +449,9 @@
                 });
             };
 
-            // Set up room buttons for both floors
             setupRoomButtons(firstFloorButtons);
             setupRoomButtons(groundFloorButtons);
 
-            // Arrow button click/tap handler
             arrowButton.addEventListener('click', function() {
                 console.log('Arrow button clicked, current floor:', isGroundFloorView ? 'ground' : 'first');
                 this.src = './UI/arrowbutton_active.png';
@@ -440,7 +459,6 @@
                     this.src = './UI/arrowbutton.png';
                 }, 100);
 
-                // Reset any active button state
                 if (activeButton) {
                     console.log('Deactivating active button:', activeButton.alt);
                     activeButton.src = activeButton.dataset.inactiveSrc;
@@ -450,7 +468,6 @@
                 }
 
                 if (!isGroundFloorView) {
-                    // Switch to ground floor
                     console.log('Switching to ground floor');
                     if (groundFloorMesh) {
                         console.log('Animating camera to ground floor mesh');
@@ -482,7 +499,6 @@
                     this.classList.add('left');
                     isGroundFloorView = true;
                 } else {
-                    // Switch to first floor
                     console.log('Switching to first floor');
                     if (firstFloorMesh) {
                         console.log('Animating camera to first floor mesh');
@@ -516,7 +532,6 @@
                 }
             });
 
-            // Calculate and set the top image height CSS variable
             const topImage = document.querySelector('#section1 img:first-child');
             topImage.addEventListener('load', () => {
                 const topImageHeight = topImage.offsetHeight;
@@ -530,16 +545,14 @@
             let camera;
             let hasAnimatedCamera = false;
             let startTime = 0;
-            const clickThreshold = 200; // milliseconds to distinguish between click and drag
+            const clickThreshold = 200;
 
-            // Camera inertia variables
             let angularVelocity = 0;
-            const friction = 0.95; // Friction coefficient (0-1)
-            const minVelocity = 0.001; // Minimum velocity before stopping
+            const friction = 0.95;
+            const minVelocity = 0.001;
             let lastDragTime = 0;
             let isInertiaActive = false;
 
-            // Handle both mouse and touch events
             const startDrag = (e) => {
                 isDragging = true;
                 isHorizontalDrag = false;
@@ -562,16 +575,13 @@
                     }
                 }
 
-                // Only check for mesh clicks if it was a quick tap/click (not a drag)
                 if (duration < clickThreshold && !isHorizontalDrag) {
                     const currentX = e.type.includes('mouse') ? e.clientX : 
                                    (e.changedTouches ? e.changedTouches[0].clientX : lastX);
                     const currentY = e.type.includes('mouse') ? e.clientY : 
                                    (e.changedTouches ? e.changedTouches[0].clientY : startY);
                     
-                    // Get the canvas position
                     const canvasRect = canvas.getBoundingClientRect();
-                    // Convert screen coordinates to scene picking ray
                     const pickResult = scene.pick(
                         currentX - canvasRect.left,
                         currentY - canvasRect.top
@@ -579,7 +589,6 @@
                     
                     if (pickResult.hit) {
                         console.log("Clicked mesh:", pickResult.pickedMesh.name);
-                        // Add your mesh interaction logic here
                     }
                 }
 
@@ -594,12 +603,10 @@
                 const currentY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
                 const currentTime = Date.now();
                 
-                // Determine if this is a horizontal drag
                 if (!isHorizontalDrag) {
                     const deltaX = Math.abs(currentX - lastX);
                     const deltaY = Math.abs(currentY - startY);
                     
-                    // If horizontal movement is greater than vertical, treat as horizontal drag
                     if (deltaX > deltaY) {
                         isHorizontalDrag = true;
                     }
@@ -610,28 +617,22 @@
                     const timeDelta = currentTime - lastDragTime;
                     
                     if (timeDelta > 0) {
-                        // Calculate angular velocity (radians per millisecond)
                         angularVelocity = (deltaX * 0.005) / timeDelta;
                     }
                     
-                    // Update camera alpha (rotation around Y axis)
                     camera.alpha -= deltaX * 0.005;
                     
                     lastX = currentX;
                     lastDragTime = currentTime;
                     
-                    // Prevent default only for horizontal drags
                     e.preventDefault();
                 }
-                // If not horizontal drag, let the default scroll behavior happen
             };
 
-            // Mouse events
             dragOverlay.addEventListener('mousedown', startDrag);
             window.addEventListener('mousemove', onDrag);
             window.addEventListener('mouseup', endDrag);
 
-            // Touch events
             dragOverlay.addEventListener('touchstart', startDrag);
             window.addEventListener('touchmove', onDrag);
             window.addEventListener('touchend', endDrag);
@@ -640,39 +641,90 @@
                 const scene = new BABYLON.Scene(engine);
                 scene.clearColor = new BABYLON.Color3(1, 1, 1);
 
-                // Camera
-                camera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 30, new BABYLON.Vector3(30, 15, 0), scene);
+                camera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 30, new BABYLON.Vector3(30, 20, 0), scene);
                 camera.attachControl(canvas, false);
-                
-                // Disable camera controls
                 camera.inputs.clear();
 
-                // Light
                 const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
-                // Load first floor model (centered)
+                // Create custom shader
+                BABYLON.Effect.ShadersStore["customVertexShader"] = `
+                    precision highp float;
+                    attribute vec3 position;
+                    attribute vec3 normal;
+                    uniform mat4 worldViewProjection;
+                    varying vec3 vNormal;
+                    void main(void) {
+                        vNormal = normal;
+                        gl_Position = worldViewProjection * vec4(position, 1.0);
+                    }
+                `;
+
+                BABYLON.Effect.ShadersStore["customFragmentShader"] = `
+                    precision highp float;
+                    varying vec3 vNormal;
+                    void main(void) {
+                        vec3 normalizedNormal = normalize(vNormal);
+                        if (normalizedNormal.y > 0.9) {
+                            gl_FragColor = vec4(0.122, 0.106, 0.075, 1.0);
+                        } else {
+                            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+                        }
+                    }
+                `;
+
+                const shaderMaterial = new BABYLON.ShaderMaterial(
+                    "customShader",
+                    scene,
+                    {
+                        vertex: "custom",
+                        fragment: "custom",
+                    },
+                    {
+                        attributes: ["position", "normal"],
+                        uniforms: ["worldViewProjection"]
+                    }
+                );
+
                 BABYLON.SceneLoader.ImportMeshAsync("", "./3D/", "firstfloor.glb", scene).then(function (result) {
                     console.log("First floor model loaded successfully");
                     firstFloorMesh = result.meshes[0];
+                    
+                    result.meshes.forEach(mesh => {
+                        if (mesh.name.startsWith('1_')) {
+                            mesh.visibility = 0;
+                        }
+                        mesh.material = shaderMaterial;
+                        mesh.enableEdgesRendering();
+                        mesh.edgesWidth = mesh.name === "GroundFloor_primitive10" ? 2.0 : 2.0;
+                        mesh.edgesColor = new BABYLON.Color4(0.121, 0.106, 0.075, 1);
+                    });
                 }).catch(function(error) {
                     console.error("Error loading first floor model:", error);
                 });
 
-                // Load ground floor model (offset on X axis)
                 BABYLON.SceneLoader.ImportMeshAsync("", "./3D/", "groundfloor.glb", scene).then(function (result) {
                     console.log("Ground floor model loaded successfully");
                     groundFloorMesh = result.meshes[0];
                     groundFloorMesh.position.x = 30;
-                    groundFloorMesh.setEnabled(false); // Initially hide ground floor
+                    groundFloorMesh.setEnabled(false);
                     
-                    // Set initial camera position and target after ground floor loads
-                    camera.position = new BABYLON.Vector3(30, 15, -15);
+                    result.meshes.forEach(mesh => {
+                        if (mesh.name.startsWith('0_')) {
+                            mesh.visibility = 0;
+                        }
+                        mesh.material = shaderMaterial;
+                        mesh.enableEdgesRendering();
+                        mesh.edgesWidth = mesh.name === "GroundFloor_primitive10" ? 2.0 : 2.0;
+                        mesh.edgesColor = new BABYLON.Color4(0.121, 0.106, 0.075, 1);
+                    });
+                    
+                    camera.position = new BABYLON.Vector3(30, 20, -15);
                     camera.setTarget(groundFloorMesh.position);
                 }).catch(function(error) {
                     console.error("Error loading ground floor model:", error);
                 });
 
-                // Add intersection observer for section transitions
                 const section3 = document.getElementById('section3');
                 const observer = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
@@ -680,11 +732,9 @@
                             console.log('Section 3 visible, starting initial animation');
                             hasAnimatedCamera = true;
                             
-                            // Make both models visible for initial animation
                             groundFloorMesh.setEnabled(true);
                             firstFloorMesh.setEnabled(true);
                             
-                            // Animate camera position
                             BABYLON.Animation.CreateAndStartAnimation(
                                 "cameraMove",
                                 camera,
@@ -696,7 +746,6 @@
                                 BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                             );
 
-                            // Animate camera target
                             BABYLON.Animation.CreateAndStartAnimation(
                                 "cameraTarget",
                                 camera,
@@ -708,7 +757,6 @@
                                 BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                             );
 
-                            // After initial animation completes, hide ground floor
                             setTimeout(() => {
                                 hasCompletedInitialAnimation = true;
                                 groundFloorMesh.setEnabled(false);
@@ -719,10 +767,9 @@
 
                 observer.observe(section3);
 
-                // Add before render observer for inertia
                 scene.onBeforeRenderObservable.add(() => {
                     if (isInertiaActive && !isDragging) {
-                        camera.alpha -= angularVelocity * 16; // Assuming 60fps, multiply by ~16ms
+                        camera.alpha -= angularVelocity * 16;
                         angularVelocity *= friction;
                         
                         if (Math.abs(angularVelocity) < minVelocity) {
@@ -732,7 +779,6 @@
                     }
                 });
 
-               
                 return scene;
             }
 
@@ -743,20 +789,16 @@
             });
 
             window.addEventListener('resize', function() {
-                // Existing resize handler for the engine
                 engine.resize();
                 
-                // Force layout recalculation for safe areas
                 document.documentElement.style.setProperty('--dummy', 'none');
                 setTimeout(() => {
                     document.documentElement.style.removeProperty('--dummy');
                 }, 0);
             });
 
-            // Some browsers also support this event for safe area changes
             if ('ondeviceinfochange' in window) {
                 window.addEventListener('deviceinfochange', function() {
-                    // Force layout recalculation
                     document.documentElement.style.setProperty('--dummy', 'none');
                     setTimeout(() => {
                         document.documentElement.style.removeProperty('--dummy');
