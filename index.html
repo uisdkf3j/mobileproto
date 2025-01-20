@@ -346,7 +346,16 @@
                             targetMesh.position,
                             BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                         );
-                        camera.radius = 15; // Default radius when no room is selected
+                        BABYLON.Animation.CreateAndStartAnimation(
+                            "cameraRadiusReset",
+                            camera,
+                            "radius",
+                            30,
+                            7,
+                            camera.radius,
+                            15,
+                            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                        );
                      }
                     } else {
                         console.warn('Target mesh not found for camera reset');
@@ -379,7 +388,16 @@
                                     targetMesh.position,
                                     BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                                 );
-                                camera.radius = 15; // Default radius when no room is selected
+                                BABYLON.Animation.CreateAndStartAnimation(
+                                    "cameraRadiusReset",
+                                    camera,
+                                    "radius",
+                                    30,
+                                    7,
+                                    camera.radius,
+                                    15,
+                                    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                                );
                             } else {
                                 console.warn('Target mesh not found for camera reset');
                             }
@@ -441,7 +459,17 @@
                                     "1_wardrobe": 3,
                                     "1_wc": 3
                                 };
-                                camera.radius = radiusMap[meshName] || 15; // Default radius if not found
+                                const targetRadius = radiusMap[meshName] || 15; // Default radius if not found
+                                BABYLON.Animation.CreateAndStartAnimation(
+                                    "cameraRadiusRoom",
+                                    camera,
+                                    "radius",
+                                    30,
+                                    7,
+                                    camera.radius,
+                                    targetRadius,
+                                    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                                );
                                 
                             } else {
                                 console.warn('Target mesh not found:', meshName);
