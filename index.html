@@ -648,10 +648,10 @@
                     const timeDelta = currentTime - lastDragTime;
                     
                     if (timeDelta > 0) {
-                        angularVelocity = (deltaX * 0.005) / timeDelta;
+                        angularVelocity = (deltaX * 0.035) / timeDelta;
                     }
                     
-                    camera.alpha -= deltaX * 0.005;
+                    camera.alpha -= deltaX * 0.015;
                     
                     lastX = currentX;
                     lastDragTime = currentTime;
@@ -771,7 +771,7 @@
                                 camera,
                                 "position",
                                 30,
-                                30,
+                                45,
                                 camera.position,
                                 new BABYLON.Vector3(0, 15, -15),
                                 BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
@@ -782,7 +782,7 @@
                                 camera,
                                 "target",
                                 30,
-                                7,
+                                10,
                                 camera.target,
                                 firstFloorMesh.position,
                                 BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
