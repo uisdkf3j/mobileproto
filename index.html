@@ -126,8 +126,8 @@
         #section3 .arrow-button {
             position: absolute;
             top: 50%;
-            width: 48px;
-            height: 48px;
+            width: 36px;
+            height: 36px;
             transform: translateY(-50%);
             z-index: 3;
             cursor: pointer;
@@ -214,10 +214,10 @@
 
         #section3 .back-button {
             position: absolute;
-            bottom: calc(max(30px, env(safe-area-inset-bottom, 30px)) + 66px);
+            bottom: calc(max(30px, env(safe-area-inset-bottom, 30px)) + 78px);
             left: 50%;
             transform: translateX(-50%);
-            height: 37px; /* Reduced by 1.5x from 56px */
+            height: 50px; /* Reduced by 1.5x from 56px */
             width: auto;
             z-index: 3;
             cursor: pointer;
@@ -356,6 +356,7 @@
                             15,
                             BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                         );
+                        
                      }
                     } else {
                         console.warn('Target mesh not found for camera reset');
@@ -671,7 +672,7 @@
                 const scene = new BABYLON.Scene(engine);
                 scene.clearColor = new BABYLON.Color3(1, 1, 1);
 
-                camera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 30, new BABYLON.Vector3(30, 20, 0), scene);
+                camera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 30, new BABYLON.Vector3(30, 30, 0), scene);
                 camera.attachControl(canvas, false);
                 camera.inputs.clear();
 
@@ -749,7 +750,7 @@
                         mesh.edgesColor = new BABYLON.Color4(0.121, 0.106, 0.075, 1);
                     });
                     
-                    camera.position = new BABYLON.Vector3(30, 20, -15);
+                    camera.position = new BABYLON.Vector3(30, 30, -15);
                     camera.setTarget(groundFloorMesh.position);
                 }).catch(function(error) {
                     console.error("Error loading ground floor model:", error);
