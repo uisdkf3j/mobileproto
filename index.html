@@ -1,119 +1,843 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Kingston Ave</title>
+    <!-- Basic meta tags for character encoding and viewport settings -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, minimal-ui">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Mobile BabylonJS Demo</title>
+
+    <!-- Load BabylonJS core and loaders -->
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
-    <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
+
     <style>
-        /* Make the canvas fill the entire browser window */
-        html, body {
+        /* Reset default styles */
+        * {
             margin: 0;
             padding: 0;
-            width: 100%;
-            /* Remove height: 100% to allow scrolling */
+            box-sizing: border-box;
         }
-        .canvas-container {
-            width: 74%;
-            height: 100vh; /* Use viewport height instead of percentage */
+        
+        /* Base section styles */
+        section {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            scroll-snap-align: start;
             position: relative;
-            margin-top: -150px; /* Pull canvas up by 200px */
-            float: left;
         }
+
+        /* Container for snap scrolling */
+        .container {
+            height: 100vh;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            touch-action: pan-y; /* Allow vertical scrolling */
+        }
+
+        /* Section 1 styles */
+        #section1 {
+            background-color: #f0f0f0;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        #section1 img:first-child {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+        }
+
+        #section1 img:nth-child(2) {
+            height: calc(100% - var(--top-image-height));
+            width: 100%;
+            object-fit: cover;
+        }
+
+        /* Floating elements in section 1 */
+        #section1 .floater1 {
+            position: absolute;
+            bottom: max(30px, env(safe-area-inset-bottom, 30px));
+            right: 20px;
+            width: 48px;
+            height: 48px;
+        }
+
+        #section1 .floater2 {
+            position: absolute;
+            bottom: max(30px, env(safe-area-inset-bottom, 30px));
+            left: 20px;
+            width: 80px;
+            height: 8px;
+        }
+
+        /* Section 2 styles */
+        #section2 {
+            background-color: #ffffff;
+            position: relative;
+        }
+
+        #section2 img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            align-self: flex-start;
+            margin-top: 55px;
+            display: block;
+        }
+
+        #section2 .section2_floater {
+            position: absolute;
+            bottom: max(30px, env(safe-area-inset-bottom, 30px));
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            height: auto;
+        }
+
+        /* 3D rendering canvas styles */
         #renderCanvas {
             width: 100%;
             height: 100%;
-            display: block;
+            touch-action: none;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        #dragOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            touch-action: pan-y; /* Allow vertical scrolling */
+        }
+
+        /* Section 3 styles - 3D viewer section */
+        #section3 {
+            position: relative;
+        }
+
+        /* Layout image in section 3 */
+        #section3 img:not(.arrow-button):not(.room-button):not(.back-button) {
+            position: absolute;
+            top: 55px;
+            left: 0;
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            z-index: 2;
+            -webkit-tap-highlight-color: transparent;  /* Remove blue highlight on tap */
+        }
+
+        /* Arrow button styles */
+        #section3 .arrow-button {
+            position: absolute;
+            top: 50%;
+            width: 36px;
+            height: 36px;
+            transform: translateY(-50%);
+            z-index: 3;
+            cursor: pointer;
+            transition: transform 0.1s ease, right 0.3s ease, left 0.3s ease;
+            pointer-events: auto;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
             outline: none;
         }
-        #infoWindow {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 0;
-            transform: translateY(-50%);
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.3);
-            z-index: 1000;
-            margin-left: 100px;
+
+        #section3 .arrow-button:focus {
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
         }
-        .close-btn {
+
+        /* Right arrow button */
+        #section3 .arrow-button.right {
+            right: 20px;
+            left: auto;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Left arrow button */
+        #section3 .arrow-button.left {
+            left: 20px;
+            right: auto;
+            transform: translateY(-50%) rotate(180deg);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Arrow button active states */
+        #section3 .arrow-button:active {
+            transform: translateY(-50%) scale(0.9);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #section3 .arrow-button.left:active {
+            transform: translateY(-50%) rotate(180deg) scale(0.9);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Room buttons container */
+        #section3 .room-buttons-container {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            cursor: pointer;
-            font-size: 20px;
+            bottom: max(30px, env(safe-area-inset-bottom, 30px));
+            left: 0;
+            right: 0;
+            height: 56px;
+            overflow-x: auto;
+            white-space: nowrap;
+            z-index: 3;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none;  /* IE and Edge */
         }
-        .sidebar {
-            width: 23%;
-            float: right;
-            padding-top: auto;
-            padding-bottom: 100px;
-            margin-right: 40px;
+
+        /* Hide scrollbar */
+        #section3 .room-buttons-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari and Opera */
+        }
+
+        /* Room button styles */
+        #section3 .room-button {
+            height: 48px;
+            width: auto;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: top;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            outline: none;
+        }
+
+        #section3 .room-button:focus {
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        #section3 .room-button:first-child {
+            margin-left: 20px;
+        }
+
+        #section3 .room-button:last-child {
+            margin-right: 20px;
+        }
+
+        /* Back button styles */
+        #section3 .back-button {
+            position: absolute;
+            bottom: calc(max(30px, env(safe-area-inset-bottom, 30px)) + 78px);
+            left: 50%;
+            transform: translateX(-50%);
+            height: 50px;
+            width: auto;
+            z-index: 3;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            display: none; /* Initially hidden */
+        }
+
+        /* Section 4 styles */
+        #section4 {
+            background-color: #ffffff;
+            position: relative;
+        }
+
+        #section4 img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            align-self: flex-start;
+            margin-top: 55px;
+        }
+
+        #section4 .section4_floater {
+            position: absolute;
+            bottom: max(30px, env(safe-area-inset-bottom, 30px));
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            height: auto;
         }
     </style>
 </head>
 <body>
-        <img src="Page_Top.png" style="width: 100%; position: relative; z-index: 2;">
-        <div class="canvas-container">
-            <canvas id="renderCanvas" tabindex="-1"></canvas>
-        </div>
-        <img src="sidebar.png" class="sidebar">
-        <div id="infoWindow">
-            <span class="close-btn" onclick="closeInfoWindow()">&times;</span>
-            <img src="Panorama.png" alt="Panorama view" style="height: 600px;">
-        </div>
-        <img src="Page_Bottom.png" style="width: 100%; clear: both;">
-    </div>
-    <script>
-        // Function to show info window
-        function showInfoWindow() {
-            document.getElementById('infoWindow').style.display = 'block';
-        }
+    <!-- Main container for snap scrolling -->
+    <div class="container">
+        <!-- Section 1: Introduction -->
+        <section id="section1">
+            <img src="./UI/section1_top.png" alt="Top image">
+            <img src="./UI/section1_bottom.png" alt="Bottom image">
+            <img src="./UI/section1_floater1.png" alt="Floating image 1" class="floater1">
+            <img src="./UI/section1_floater2.png" alt="Floating image 2" class="floater2">
+        </section>
 
-        // Function to close info window
-        function closeInfoWindow() {
-            document.getElementById('infoWindow').style.display = 'none';
-        }
+        <!-- Section 2: Information -->
+        <section id="section2">
+            <img src="./UI/section2_top.png" alt="Section 2 Top image">
+            <img src="./UI/section2_floater.png" alt="Section 2 Floating image" class="section2_floater">
+        </section>
 
-        // Get the canvas element
-        var canvas = document.getElementById("renderCanvas");
-
-        // Generate the BABYLON 3D engine
-        var engine = new BABYLON.Engine(canvas, true);
-
-        // Create the scene
-        var createScene = async function () {
-            var scene = new BABYLON.Scene(engine);
+        <!-- Section 3: 3D Viewer -->
+        <section id="section3">
+            <!-- 3D rendering canvas and interaction overlay -->
+            <canvas id="renderCanvas"></canvas>
+            <div id="dragOverlay"></div>
             
-            // Define shared variables at scene level
-            let hoveredPrimitive = '';
-            let defaultShaderMaterial;
-            let hoverShaderMaterial;
-            let clickedShaderMaterial;
+            <!-- Floor layout image -->
+            <img src="./UI/section3_top_layout_firstfloor.png" alt="Section 3 Top Layout" id="floorLayoutImage">
+            
+            <!-- Navigation buttons -->
+            <img src="./UI/arrowbutton.png" alt="Arrow Button" class="arrow-button right" id="arrowButton" draggable="false">
+            <img src="./UI/back.png" alt="Back Button" class="back-button">
+            
+            <!-- First floor room buttons -->
+            <div class="room-buttons-container" id="firstFloorButtons">
+                <img src="./UI/1_room1.png" alt="Room 1" class="room-button" data-active-src="./UI/1_room1_active.png" data-inactive-src="./UI/1_room1.png">
+                <img src="./UI/1_room2.png" alt="Room 2" class="room-button" data-active-src="./UI/1_room2_active.png" data-inactive-src="./UI/1_room2.png">
+                <img src="./UI/1_room3.png" alt="Room 3" class="room-button" data-active-src="./UI/1_room3_active.png" data-inactive-src="./UI/1_room3.png">
+                <img src="./UI/1_kitchen.png" alt="Kitchen" class="room-button" data-active-src="./UI/1_kitchen_active.png" data-inactive-src="./UI/1_kitchen.png">
+                <img src="./UI/1_bathroom1.png" alt="Bathroom 1" class="room-button" data-active-src="./UI/1_bathroom1_active.png" data-inactive-src="./UI/1_bathroom1.png">
+                <img src="./UI/1_bathroom2.png" alt="Bathroom 2" class="room-button" data-active-src="./UI/1_bathroom2_active.png" data-inactive-src="./UI/1_bathroom2.png">
+                <img src="./UI/1_landing.png" alt="Landing" class="room-button" data-active-src="./UI/1_landing_active.png" data-inactive-src="./UI/1_landing.png">
+                <img src="./UI/1_sunroom.png" alt="Sunroom" class="room-button" data-active-src="./UI/1_sunroom_active.png" data-inactive-src="./UI/1_sunroom.png">
+                <img src="./UI/1_terrace.png" alt="Terrace" class="room-button" data-active-src="./UI/1_terrace_active.png" data-inactive-src="./UI/1_terrace.png">
+                <img src="./UI/1_wardrobe.png" alt="Wardrobe" class="room-button" data-active-src="./UI/1_wardrobe_active.png" data-inactive-src="./UI/1_wardrobe.png">
+                <img src="./UI/1_wc.png" alt="WC" class="room-button" data-active-src="./UI/1_wc_active.png" data-inactive-src="./UI/1_wc.png">
+            </div>
+            
+            <!-- Ground floor room buttons (initially hidden) -->
+            <div class="room-buttons-container" id="groundFloorButtons" style="display: none;">
+                <img src="./UI/0_room1.png" alt="Room 1" class="room-button" data-active-src="./UI/0_room1_active.png" data-inactive-src="./UI/0_room1.png">
+                <img src="./UI/0_room2.png" alt="Room 2" class="room-button" data-active-src="./UI/0_room2_active.png" data-inactive-src="./UI/0_room2.png">
+                <img src="./UI/0_room3.png" alt="Room 3" class="room-button" data-active-src="./UI/0_room3_active.png" data-inactive-src="./UI/0_room3.png">
+                <img src="./UI/0_room4.png" alt="Room 4" class="room-button" data-active-src="./UI/0_room4_active.png" data-inactive-src="./UI/0_room4.png">
+                <img src="./UI/0_room5.png" alt="Room 5" class="room-button" data-active-src="./UI/0_room5_active.png" data-inactive-src="./UI/0_room5.png">
+                <img src="./UI/0_garage.png" alt="Garage" class="room-button" data-active-src="./UI/0_garage_active.png" data-inactive-src="./UI/0_garage.png">
+                <img src="./UI/0_landing.png" alt="Landing" class="room-button" data-active-src="./UI/0_landing_active.png" data-inactive-src="./UI/0_landing.png">
+                <img src="./UI/0_utilityroom.png" alt="Utility Room" class="room-button" data-active-src="./UI/0_utilityroom_active.png" data-inactive-src="./UI/0_utilityroom.png">
+                <img src="./UI/0_wc.png" alt="WC" class="room-button" data-active-src="./UI/0_wc_active.png" data-inactive-src="./UI/0_wc.png">
+            </div>
+        </section>
 
-            // Set the background color to pure white
-            scene.clearColor = new BABYLON.Color3(1, 1, 1);
+        <!-- Section 4: Additional Information -->
+        <section id="section4">
+            <img src="./UI/section4_top.png" alt="Section 4 Top image">
+            <img src="./UI/section4_floater.png" alt="Section 4 Floating image" class="section4_floater">
+        </section>
+    </div>
 
-            // Camera setup function
-            const setupCamera = () => {
-                const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 3.5, Math.PI / 5, 45, new BABYLON.Vector3(0, 0, 0), scene);
-                camera.attachControl(canvas, true, false);
-                camera.fov = 0.5;
-                camera.inertia = 0.7;
-                camera.angularSensibilityX = 300;
-                camera.angularSensibilityY = 300;
-                camera.lowerRadiusLimit = camera.upperRadiusLimit = camera.radius; // Disable zooming
-                return camera;
+    <script>
+        // Wait for DOM content to be loaded before initializing
+        window.addEventListener('DOMContentLoaded', function() {
+            // Get references to DOM elements
+            const canvas = document.getElementById('renderCanvas');
+            const dragOverlay = document.getElementById('dragOverlay');
+            
+            // Initialize BabylonJS engine with high DPI support
+            const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+            engine.setHardwareScalingLevel(1 / window.devicePixelRatio);
+            
+            // Get references to UI elements
+            const arrowButton = document.getElementById('arrowButton');
+            const floorLayoutImage = document.getElementById('floorLayoutImage');
+            const firstFloorButtons = document.getElementById('firstFloorButtons');
+            const groundFloorButtons = document.getElementById('groundFloorButtons');
+            const backButton = document.querySelector('.back-button');
+            
+            // State variables
+            let activeButton = null;
+            let groundFloorMesh; 
+            let firstFloorMesh;
+            let isGroundFloorView = false;
+            let hasCompletedInitialAnimation = false;
+            let visibilityTimeout;
+
+            // Back button click handler
+            backButton.addEventListener('click', function() {
+                console.log('Back button clicked');
+                if (activeButton) {
+                    console.log('Deactivating button:', activeButton.alt);
+                    activeButton.src = activeButton.dataset.inactiveSrc;
+                    activeButton = null;
+                    backButton.style.display = 'none';
+                    arrowButton.style.display = 'block';
+                    
+                    const targetMesh = isGroundFloorView ? groundFloorMesh : firstFloorMesh;
+                    if (targetMesh) {
+                        console.log('Target mesh position:', {
+                            x: targetMesh.position.x,
+                            y: targetMesh.position.y,
+                            z: targetMesh.position.z
+                        });
+                        
+                        // Animate camera back to floor view
+                        BABYLON.Animation.CreateAndStartAnimation(
+                            "cameraTargetRoom",
+                            camera,
+                            "target",
+                            30,
+                            7,
+                            camera.target,
+                            targetMesh.position,
+                            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                        );
+                        BABYLON.Animation.CreateAndStartAnimation(
+                            "cameraRadiusReset",
+                            camera,
+                            "radius",
+                            30,
+                            7,
+                            camera.radius,
+                            15,
+                            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                        );
+                        
+                     }
+                    } else {
+                        console.warn('Target mesh not found for camera reset');
+                }
+            });
+
+            // Setup room buttons click handlers
+            const setupRoomButtons = (container) => {
+                const buttons = container.querySelectorAll('.room-button');
+                buttons.forEach(button => {
+                    button.addEventListener('click', function() {
+                        console.log('Room button clicked:', this.alt);
+                        if (activeButton === this) {
+                            // Deactivate current button
+                            console.log('Deactivating current button:', this.alt);
+                            this.src = this.dataset.inactiveSrc;
+                            activeButton = null;
+                            backButton.style.display = 'none';
+                            arrowButton.style.display = 'block';
+                            
+                            const targetMesh = isGroundFloorView ? groundFloorMesh : firstFloorMesh;
+                            if (targetMesh) {
+                                console.log('Resetting camera target to floor mesh:', isGroundFloorView ? 'ground floor' : 'first floor');
+                                // Animate camera back to floor view
+                                BABYLON.Animation.CreateAndStartAnimation(
+                                    "cameraTargetReset",
+                                    camera,
+                                    "target",
+                                    30,
+                                    7,
+                                    camera.target,
+                                    targetMesh.position,
+                                    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                                );
+                                BABYLON.Animation.CreateAndStartAnimation(
+                                    "cameraRadiusReset",
+                                    camera,
+                                    "radius",
+                                    30,
+                                    7,
+                                    camera.radius,
+                                    15,
+                                    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                                );
+                            } else {
+                                console.warn('Target mesh not found for camera reset');
+                            }
+                        } else {
+                            // Activate new button
+                            if (activeButton) {
+                                console.log('Deactivating previous button:', activeButton.alt);
+                                activeButton.src = activeButton.dataset.inactiveSrc;
+                            }
+                            console.log('Activating new button:', this.alt);
+                            this.src = this.dataset.activeSrc;
+                            activeButton = this;
+                            backButton.style.display = 'block';
+                            arrowButton.style.display = 'none';
+                            
+                            // Find corresponding 3D mesh
+                            const imgSrc = this.src;
+                            const meshName = imgSrc.split('/').pop().split('_active.png')[0];
+                            console.log('Looking for mesh with name:', meshName);
+                            
+                            const targetMesh = scene.getMeshByName(meshName);
+                            if (targetMesh) {
+                                console.log('Found target mesh:', meshName);
+                                const xOffset = meshName.startsWith('0') ? 30 : 0;
+                                const invertedPosition = new BABYLON.Vector3(
+                                    -targetMesh.position.x + xOffset,
+                                    targetMesh.position.y,
+                                    targetMesh.position.z
+                                );
+                                
+                                // Animate camera to room view
+                                BABYLON.Animation.CreateAndStartAnimation(
+                                    "cameraTargetRoom",
+                                    camera,
+                                    "target",
+                                    30,
+                                    7,
+                                    camera.target,
+                                    invertedPosition,
+                                    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                                );
+                                
+                                // Set camera radius based on the room
+                                const radiusMap = {
+                                    "0_garage": 6,
+                                    "0_landing": 5,
+                                    "0_room1": 4,
+                                    "0_room2": 4,
+                                    "0_room3": 4.5,
+                                    "0_room4": 5,
+                                    "0_room5": 4,
+                                    "0_utilityroom": 4,
+                                    "0_wc": 3,
+                                    "1_bathroom1": 3.5,
+                                    "1_bathroom2": 3.5,
+                                    "1_kitchen": 6,
+                                    "1_landing": 4.5,
+                                    "1_room1": 4.5,
+                                    "1_room2": 4,
+                                    "1_room3": 4,
+                                    "1_sunroom": 4.5,
+                                    "1_terrace": 6,
+                                    "1_wardrobe": 3,
+                                    "1_wc": 3
+                                };
+                                const targetRadius = radiusMap[meshName] || 15;
+                                BABYLON.Animation.CreateAndStartAnimation(
+                                    "cameraRadiusRoom",
+                                    camera,
+                                    "radius",
+                                    30,
+                                    7,
+                                    camera.radius,
+                                    targetRadius,
+                                    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                                );
+                                
+                            } else {
+                                console.warn('Target mesh not found:', meshName);
+                            }
+                        }
+                    });
+                });
+            };
+
+            // Initialize room buttons
+            setupRoomButtons(firstFloorButtons);
+            setupRoomButtons(groundFloorButtons);
+
+            // Floor switch button handler
+            arrowButton.addEventListener('click', function() {
+                console.log('Arrow button clicked, current floor:', isGroundFloorView ? 'ground' : 'first');
+                this.src = './UI/arrowbutton_active.png';
+                setTimeout(() => {
+                    this.src = './UI/arrowbutton.png';
+                }, 100);
+
+                if (activeButton) {
+                    console.log('Deactivating active button:', activeButton.alt);
+                    activeButton.src = activeButton.dataset.inactiveSrc;
+                    activeButton = null;
+                    backButton.style.display = 'none';
+                    arrowButton.style.display = 'block';
+                }
+
+                if (!isGroundFloorView) {
+                    // Switch to ground floor
+                    console.log('Switching to ground floor');
+                    if (groundFloorMesh) {
+                        console.log('Animating camera to ground floor mesh');
+                        BABYLON.Animation.CreateAndStartAnimation(
+                            "cameraTargetSwitch",
+                            camera,
+                            "target",
+                            30,
+                            7,
+                            camera.target,
+                            groundFloorMesh.position,
+                            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                        );
+                        
+                        groundFloorMesh.setEnabled(true);
+                        clearTimeout(visibilityTimeout);
+                        visibilityTimeout = setTimeout(() => {
+                            firstFloorMesh.setEnabled(false);
+                            console.log('First floor mesh hidden');
+                        }, 200);
+                        
+                        floorLayoutImage.src = './UI/section3_top_layout_groundfloor.png';
+                        firstFloorButtons.style.display = 'none';
+                        groundFloorButtons.style.display = 'block';
+                    } else {
+                        console.warn('Ground floor mesh not found');
+                    }
+                    this.classList.remove('right');
+                    this.classList.add('left');
+                    isGroundFloorView = true;
+                } else {
+                    // Switch to first floor
+                    console.log('Switching to first floor');
+                    if (firstFloorMesh) {
+                        console.log('Animating camera to first floor mesh');
+                        BABYLON.Animation.CreateAndStartAnimation(
+                            "cameraTargetSwitch",
+                            camera,
+                            "target",
+                            30,
+                            7,
+                            camera.target,
+                            firstFloorMesh.position,
+                            BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                        );
+                        
+                        firstFloorMesh.setEnabled(true);
+                        clearTimeout(visibilityTimeout);
+                        visibilityTimeout = setTimeout(() => {
+                            groundFloorMesh.setEnabled(false);
+                            console.log('Ground floor mesh hidden');
+                        }, 200);
+                        
+                        floorLayoutImage.src = './UI/section3_top_layout_firstfloor.png';
+                        groundFloorButtons.style.display = 'none';
+                        firstFloorButtons.style.display = 'block';
+                    } else {
+                        console.warn('First floor mesh not found');
+                    }
+                    this.classList.remove('left');
+                    this.classList.add('right');
+                    isGroundFloorView = false;
+                }
+            });
+
+            // Update top image height variable
+            const topImage = document.querySelector('#section1 img:first-child');
+            topImage.addEventListener('load', () => {
+                const topImageHeight = topImage.offsetHeight;
+                document.documentElement.style.setProperty('--top-image-height', topImageHeight + 'px');
+            });
+
+            // Drag interaction variables
+            let isDragging = false;
+            let lastX = 0;
+            let isHorizontalDrag = false;
+            let startY = 0;
+            let camera;
+            let hasAnimatedCamera = false;
+            let startTime = 0;
+            const clickThreshold = 200;
+            let isProcessingClick = false;
+
+            // Inertia variables
+            let angularVelocity = 0;
+            const friction = 0.95;
+            const minVelocity = 0.001;
+            let lastDragTime = 0;
+            let isInertiaActive = false;
+
+            // Drag handlers
+            const startDrag = (e) => {
+                isDragging = true;
+                isHorizontalDrag = false;
+                lastX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                startY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+                startTime = Date.now();
+                lastDragTime = startTime;
+                angularVelocity = 0;
+                isInertiaActive = false;
+            };
+
+            
+
+
+
+            const endDrag = (e) => {
+                if (isProcessingClick) return;
+                isProcessingClick = true;
                 
+                const endTime = Date.now();
+                const duration = endTime - startTime;
+
+                if (isHorizontalDrag) {
+                    const timeDelta = endTime - lastDragTime;
+                    if (timeDelta > 0) {
+                        isInertiaActive = true;
+                    }
+                }
+
+
+                if (duration < clickThreshold && !isHorizontalDrag) {
+                    const currentX = e.type.includes('mouse') ? e.clientX : 
+                                (e.changedTouches ? e.changedTouches[0].clientX : lastX);
+                    const currentY = e.type.includes('mouse') ? e.clientY : 
+                                (e.changedTouches ? e.changedTouches[0].clientY : startY);
+                    
+                    const canvasRect = canvas.getBoundingClientRect();
+                    const pickResult = scene.pick(
+                        currentX - canvasRect.left,
+                        currentY - canvasRect.top
+                    );
+                    
+                    if (pickResult.hit) {
+                        const meshName = pickResult.pickedMesh.name;
+                        console.log("Clicked mesh:", meshName);
+
+                        // Find and activate corresponding room button
+                        const buttonContainer = meshName.startsWith('0_') ? groundFloorButtons : firstFloorButtons;
+                        const matchingButton = buttonContainer.querySelector(`[data-active-src*="${meshName}_active"]`);
+                        
+                            // ... existing code ...
+                        if (matchingButton) {
+                            // Deactivate current active button if exists
+                            if (activeButton) {
+                                activeButton.src = activeButton.dataset.inactiveSrc;
+                            }
+
+                            // Activate new button
+                            matchingButton.src = matchingButton.dataset.activeSrc;
+                            activeButton = matchingButton;
+                            backButton.style.display = 'block';
+                            arrowButton.style.display = 'none';
+
+                            // Scroll the button into view with smooth animation
+                            matchingButton.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'nearest',
+                                inline: 'center'
+                            });
+
+                            // Calculate camera target position
+                            const xOffset = meshName.startsWith('0_') ? 30 : 0;
+                            const invertedPosition = new BABYLON.Vector3(
+                                -pickResult.pickedMesh.position.x + xOffset,
+                                pickResult.pickedMesh.position.y,
+                                pickResult.pickedMesh.position.z
+                            );
+                        // ... existing code ...
+                            
+                            // Animate camera to room view
+                            BABYLON.Animation.CreateAndStartAnimation(
+                                "cameraTargetRoom",
+                                camera,
+                                "target",
+                                30,
+                                7,
+                                camera.target,
+                                invertedPosition,
+                                BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                            );
+                            
+                            // Set camera radius based on the room
+                            const radiusMap = {
+                                "0_garage": 6,
+                                "0_landing": 5,
+                                "0_room1": 4,
+                                "0_room2": 4,
+                                "0_room3": 4.5,
+                                "0_room4": 5,
+                                "0_room5": 4,
+                                "0_utilityroom": 4,
+                                "0_wc": 3,
+                                "1_bathroom1": 3.5,
+                                "1_bathroom2": 3.5,
+                                "1_kitchen": 6,
+                                "1_landing": 4.5,
+                                "1_room1": 4.5,
+                                "1_room2": 4,
+                                "1_room3": 4,
+                                "1_sunroom": 4.5,
+                                "1_terrace": 6,
+                                "1_wardrobe": 3,
+                                "1_wc": 3
+                            };
+                            const targetRadius = radiusMap[meshName] || 15;
+                            
+                            BABYLON.Animation.CreateAndStartAnimation(
+                                "cameraRadiusRoom",
+                                camera,
+                                "radius",
+                                30,
+                                7,
+                                camera.radius,
+                                targetRadius,
+                                BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                            );
+                        }
+                    }
+                }
+
+
+                isDragging = false;
+                isHorizontalDrag = false;
+                
+                // Reset the processing flag after a short delay
+                setTimeout(() => {
+                    isProcessingClick = false;
+                }, 100);
             };
             
-            // Shader setup functions
-            const createShaderMaterials = (scene) => {
-                const vertexShaderCode = `
+            const onDrag = (e) => {
+                if (!isDragging) return;
+                
+                const currentX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+                const currentY = e.type.includes('mouse') ? e.clientY : e.touches[0].clientY;
+                const currentTime = Date.now();
+                
+                if (!isHorizontalDrag) {
+                    const deltaX = Math.abs(currentX - lastX);
+                    const deltaY = Math.abs(currentY - startY);
+                    
+                    if (deltaX > deltaY) {
+                        isHorizontalDrag = true;
+                    }
+                }
+
+                if (isHorizontalDrag) {
+                    const deltaX = currentX - lastX;
+                    const timeDelta = currentTime - lastDragTime;
+                    
+                    if (timeDelta > 0) {
+                        angularVelocity = (deltaX * 0.010) / timeDelta;
+                    }
+                    
+                    camera.alpha -= deltaX * 0.008;
+                    
+                    lastX = currentX;
+                    lastDragTime = currentTime;
+                    
+                    e.preventDefault();
+                }
+            };
+
+            // Add drag event listeners
+            dragOverlay.addEventListener('mousedown', startDrag);
+            window.addEventListener('mousemove', onDrag);
+            window.addEventListener('mouseup', endDrag);
+
+            dragOverlay.addEventListener('touchstart', startDrag);
+            window.addEventListener('touchmove', onDrag);
+            window.addEventListener('touchend', endDrag);
+
+            const createScene = function() {
+                const scene = new BABYLON.Scene(engine);
+                scene.clearColor = new BABYLON.Color3(1, 1, 1);
+
+                camera = new BABYLON.ArcRotateCamera("camera", 0, Math.PI / 3, 30, new BABYLON.Vector3(30, 30, 0), scene);
+                camera.attachControl(canvas, false);
+                camera.inputs.clear();
+
+                const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+
+                // Create custom shader
+                BABYLON.Effect.ShadersStore["customVertexShader"] = `
                     precision highp float;
                     attribute vec3 position;
                     attribute vec3 normal;
@@ -125,315 +849,152 @@
                     }
                 `;
 
-                const fragmentShaders = {
-                    default: `
-                        precision highp float;
-                        varying vec3 vNormal;
-                        void main(void) {
-                            vec3 normalizedNormal = normalize(vNormal);
-                            if (normalizedNormal.y > 0.9) {
-                                gl_FragColor = vec4(0.122, 0.106, 0.075, 1.0);
-                            } else {
-                                gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
-                            }
-                        }
-                    `,
-                    hover: `
-                        precision highp float;
-                        varying vec3 vNormal;
-                        void main(void) {
-                            vec3 normalizedNormal = normalize(vNormal);
-                            gl_FragColor = vec4(1.0, 0.937, 0.816, 1.0);
-                        }
-                    `,
-                    clicked: `
-                        precision highp float;
-                        varying vec3 vNormal;
-                        void main(void) {
-                            gl_FragColor = vec4(1.0, 0.776, 0.0, 1.0);
-                        }
-                    `
-                };
-
-                return {
-                    default: new BABYLON.ShaderMaterial("defaultShader", scene, {
-                        vertexSource: vertexShaderCode,
-                        fragmentSource: fragmentShaders.default,
-                    }, {
-                        attributes: ["position", "normal", "uv"],
-                        uniforms: ["world", "worldViewProjection", "view", "projection"]
-                    }),
-                    hover: new BABYLON.ShaderMaterial("hoverShader", scene, {
-                        vertexSource: vertexShaderCode,
-                        fragmentSource: fragmentShaders.hover,
-                    }, {
-                        attributes: ["position", "normal", "uv"],
-                        uniforms: ["world", "worldViewProjection", "view", "projection"]
-                    }),
-                    clicked: new BABYLON.ShaderMaterial("clickedShader", scene, {
-                        vertexSource: vertexShaderCode,
-                        fragmentSource: fragmentShaders.clicked,
-                    }, {
-                        attributes: ["position", "normal", "uv"],
-                        uniforms: ["world", "worldViewProjection", "view", "projection"]
-                    })
-                };
-            };
-
-            // Mesh interaction setup
-            const setupMeshInteractions = (mesh, materials, camera) => {
-                if (mesh.name === "Hitbox") {
-                    mesh.visibility = 0;
-                    mesh.actionManager = new BABYLON.ActionManager(scene);
-                    
-                    mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-                        BABYLON.ActionManager.OnPointerOverTrigger,
-                        () => {
-                            const pinScaleUpAnimation = scene.getAnimationGroupByName("PinScaleUp_1");
-                            if (pinScaleUpAnimation) {
-                                pinScaleUpAnimation.start(false);
-                            }
-
-                            // Handle primitive1 color change
-                            const primitive1 = scene.getMeshByName("GroundFloor_primitive1");
-                            if (primitive1) {
-                                if (primitive1.material !== materials.clicked) {
-                                    primitive1.material = materials.hover;
-                                }
-                            }
-                        }
-                    ));
-
-                    mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-                        BABYLON.ActionManager.OnPointerOutTrigger,
-                        () => {
-                            const pinScaleDownAnimation = scene.getAnimationGroupByName("PinScaleDown_1");
-                            if (pinScaleDownAnimation) {
-                                pinScaleDownAnimation.start(false);
-                            }
-
-                            // Handle primitive1 color change
-                            const primitive1 = scene.getMeshByName("GroundFloor_primitive1");
-                            if (primitive1) {
-                                if (primitive1.material !== materials.clicked) {
-                                    primitive1.material = materials.default;
-                                    
-                                    // Only play PinDisapear_1 if primitive1 is not being hovered
-                                    if (hoveredPrimitive !== "GroundFloor_primitive1") {
-                                        const pinDisappearAnimation = scene.getAnimationGroupByName("PinDisapear_1");
-                                        if (pinDisappearAnimation) {
-                                            pinDisappearAnimation.start(false);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    ));
-
-                    // Add click action for hitbox
-                    mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-                        BABYLON.ActionManager.OnPickTrigger,
-                        () => {
-                            showInfoWindow();
-                        }
-                    ));
-                    return;
-                }
-
-                const marker1 = scene.getTransformNodeByName("Marker_1");
-                if (marker1 && marker1.getChildMeshes().includes(mesh)) {
-                    console.log("found marker1 child:", mesh.name);
-                    return;
-                }
-
-                // Edge rendering setup
-                mesh.enableEdgesRendering();
-                mesh.edgesWidth = mesh.name === "GroundFloor_primitive10" ? 2.0 : 8.0;
-                mesh.edgesColor = new BABYLON.Color4(0.121, 0.106, 0.075, 1);
-
-                // Apply materials
-                materials.default.forceCompilation(mesh);
-                materials.hover.forceCompilation(mesh);
-                materials.clicked.forceCompilation(mesh);
-                mesh.material = materials.default;
-
-                // Setup interactions for ground floor primitives
-                if (mesh.name.match(/^GroundFloor_primitive[1-9]$/)) {
-                    setupGroundFloorInteractions(mesh, materials, camera);
-                }
-            };
-
-            // Ground floor specific interactions
-            const setupGroundFloorInteractions = (mesh, materials, camera) => {
-                mesh.actionManager = new BABYLON.ActionManager(scene);
-                
-                // Hover actions
-                mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-                    BABYLON.ActionManager.OnPointerOverTrigger,
-                    () => {
-                        if (mesh.material !== materials.clicked) {
-                            mesh.material = materials.hover;
-                            hoveredPrimitive = mesh.name;
-
-                            // Play the animation group 'PinAppear_1' on hover only for GroundFloor_primitive1
-                            if (mesh.name === "GroundFloor_primitive1") {
-                                const pinAppearAnimation = scene.getAnimationGroupByName("PinAppear_1");
-                                if (pinAppearAnimation) {
-                                    pinAppearAnimation.start(false); // Ensure the animation does not loop
-                                }
-                            }
-                        }
-                    }
-                ));
-
-                mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-                    BABYLON.ActionManager.OnPointerOutTrigger,
-                    () => {
-                        if (mesh.material !== materials.clicked) {
-                            mesh.material = materials.default;
-                            hoveredPrimitive = '';
-
-                            // Play the animation group 'PinDisapear_1' on hover end only for GroundFloor_primitive1
-                            if (mesh.name === "GroundFloor_primitive1") {
-                                const pinDisappearAnimation = scene.getAnimationGroupByName("PinDisapear_1");
-                                if (pinDisappearAnimation) {
-                                    pinDisappearAnimation.start(false); // Ensure the animation does not loop
-                                }
-                            }
-                        }
-                    }
-                ));
-
-                // Special handling for primitive1
-                if (mesh.name === "GroundFloor_primitive1") {
-                    setupPrimitive1Interactions(mesh, materials, camera);
-                }
-            };
-
-            // Primitive1 specific interactions
-            const setupPrimitive1Interactions = (mesh, materials, camera) => {
-                mesh.isClicked = false;
-                mesh.actionManager.registerAction(new BABYLON.ExecuteCodeAction(
-                    BABYLON.ActionManager.OnPickTrigger,
-                    () => {
-                        mesh.isClicked = !mesh.isClicked;
-                        if (mesh.isClicked) {
-                            mesh.material = materials.clicked;
-                            const marker = scene.getTransformNodeByName("Marker_1");
-                            if (marker) {
-                                animateCameraToPosition(camera, new BABYLON.Vector3(-marker.position.x, marker.position.y, marker.position.z));
-                            }
+                BABYLON.Effect.ShadersStore["customFragmentShader"] = `
+                    precision highp float;
+                    varying vec3 vNormal;
+                    void main(void) {
+                        vec3 normalizedNormal = normalize(vNormal);
+                        if (normalizedNormal.y > 0.9) {
+                            gl_FragColor = vec4(0.122, 0.106, 0.075, 1.0);
                         } else {
-                            mesh.material = materials.default;
-                            animateCameraToPosition(camera, BABYLON.Vector3.Zero());
+                            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
                         }
                     }
-                ));
-            };
+                `;
 
-            // Camera animation helper
-            const animateCameraToPosition = (camera, targetPosition) => {
-                BABYLON.Animation.CreateAndStartAnimation(
-                    "cameraAnimation",
-                    camera,
-                    "target",
-                    30,
-                    15,
-                    camera.target,
-                    targetPosition,
-                    BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                const shaderMaterial = new BABYLON.ShaderMaterial(
+                    "customShader",
+                    scene,
+                    {
+                        vertex: "custom",
+                        fragment: "custom",
+                    },
+                    {
+                        attributes: ["position", "normal"],
+                        uniforms: ["worldViewProjection"]
+                    }
                 );
-            };
 
-            // Marker rotation setup
-            const setupMarkerRotation = (marker, camera) => {
-                const updateMarkerRotation = () => {
-                    const pin = scene.getMeshByName("Pin_primitive0");
-                    if (!pin) return;
-
-                    const direction = new BABYLON.Vector3(
-                        camera.position.x - pin.position.x,
-                        camera.position.y - pin.position.y,
-                        camera.position.z - pin.position.z
-                    );
-                    // Calculate rotation around Y axis (horizontal)
-                    marker.rotation.y = Math.atan2(direction.x, direction.z);
-                    // Calculate rotation around X axis (vertical)
-                    marker.rotation.x = Math.atan2(direction.y, Math.sqrt(direction.x * direction.x + direction.z * direction.z));
+                BABYLON.SceneLoader.ImportMeshAsync("", "./3D/", "firstfloor.glb", scene).then(function (result) {
+                    console.log("First floor model loaded successfully");
+                    firstFloorMesh = result.meshes[0];
                     
-                
-
-                    // Rotate all child meshes of marker
-                    marker.getChildMeshes().forEach(child => {
-                        child.rotation.x = -marker.rotation.x;
-                        child.rotation.y = -marker.rotation.y;
-                       // child.rotation.z = marker.rotation.z;
+                    result.meshes.forEach(mesh => {
+                        if (mesh.name.startsWith('1_')) {
+                            mesh.visibility = 0;
+                        }
+                        mesh.material = shaderMaterial;
+                        mesh.enableEdgesRendering();
+                        mesh.edgesWidth = mesh.name === "GroundFloor_primitive10" ? 2.0 : 2.0;
+                        mesh.edgesColor = new BABYLON.Color4(0.121, 0.106, 0.075, 1);
                     });
-                };
+                }).catch(function(error) {
+                    console.error("Error loading first floor model:", error);
+                });
 
-                scene.registerBeforeRender(updateMarkerRotation);
-            };
+                BABYLON.SceneLoader.ImportMeshAsync("", "./3D/", "groundfloor.glb", scene).then(function (result) {
+                    console.log("Ground floor model loaded successfully");
+                    groundFloorMesh = result.meshes[0];
+                    groundFloorMesh.position.x = 30;
+                    groundFloorMesh.setEnabled(false);
+                    
+                    result.meshes.forEach(mesh => {
+                        if (mesh.name.startsWith('0_')) {
+                            mesh.visibility = 0;
+                        }
+                        mesh.material = shaderMaterial;
+                        mesh.enableEdgesRendering();
+                        mesh.edgesWidth = mesh.name === "GroundFloor_primitive10" ? 2.0 : 2.0;
+                        mesh.edgesColor = new BABYLON.Color4(0.121, 0.106, 0.075, 1);
+                    });
+                    
+                    camera.position = new BABYLON.Vector3(30, 30, -15);
+                    camera.setTarget(groundFloorMesh.position);
+                }).catch(function(error) {
+                    console.error("Error loading ground floor model:", error);
+                });
 
-            // Initialize scene components
-            const camera = setupCamera();
-            const materials = createShaderMaterials(scene);
-            defaultShaderMaterial = materials.default;
-            hoverShaderMaterial = materials.hover;
-            clickedShaderMaterial = materials.clicked;
+                const section3 = document.getElementById('section3');
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting && !hasAnimatedCamera && groundFloorMesh && firstFloorMesh) {
+                            console.log('Section 3 visible, starting initial animation');
+                            hasAnimatedCamera = true;
+                            
+                            groundFloorMesh.setEnabled(true);
+                            firstFloorMesh.setEnabled(true);
+                            
+                            BABYLON.Animation.CreateAndStartAnimation(
+                                "cameraMove",
+                                camera,
+                                "position",
+                                30,
+                                45,
+                                camera.position,
+                                new BABYLON.Vector3(0, 15, -15),
+                                BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                            );
 
-            // Load and setup model
-            await BABYLON.SceneLoader.AppendAsync("./", "object.glb", scene);
+                            BABYLON.Animation.CreateAndStartAnimation(
+                                "cameraTarget",
+                                camera,
+                                "target",
+                                30,
+                                10,
+                                camera.target,
+                                firstFloorMesh.position,
+                                BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
+                            );
 
-            // Stop all animations initially
-            scene.animationGroups.forEach(animationGroup => {
-                animationGroup.reset();
-                animationGroup.stop();
+                            setTimeout(() => {
+                                hasCompletedInitialAnimation = true;
+                                groundFloorMesh.setEnabled(false);
+                            }, 1000);
+                        }
+                    });
+                }, { threshold: 0.5 });
+
+                observer.observe(section3);
+
+                scene.onBeforeRenderObservable.add(() => {
+                    if (isInertiaActive && !isDragging) {
+                        camera.alpha -= angularVelocity * 16;
+                        angularVelocity *= friction;
+                        
+                        if (Math.abs(angularVelocity) < minVelocity) {
+                            isInertiaActive = false;
+                            angularVelocity = 0;
+                        }
+                    }
+                });
+
+                return scene;
+            }
+
+            const scene = createScene();
+
+            engine.runRenderLoop(function() {
+                scene.render();
             });
 
-            // Set PinAppear_1 to its first frame
-            const pinAppearAnimation = scene.getAnimationGroupByName("PinAppear_1");
-            if (pinAppearAnimation) {
-                pinAppearAnimation.start(false);
-                pinAppearAnimation.goToFrame(0);
-                pinAppearAnimation.stop();
-            }
-
-            scene.meshes.forEach(mesh => setupMeshInteractions(mesh, materials, camera));
-
-            // Setup marker rotation
-            const marker1 = scene.getTransformNodeByName("Marker_1");
-            if (marker1) {
-                setupMarkerRotation(marker1, camera);
-            }
-
-            return scene;
-        };
-
-        // Initialize the scene more cleanly
-        let scene;
-        async function initScene() {
-            try {
-                scene = await createScene();
-            } catch (error) {
-                console.error("Failed to create scene:", error);
-            }
-        }
-
-        // Start the render loop only after scene is created
-        initScene().then(() => {
-            engine.runRenderLoop(function () {
-                if (scene) {
-                    scene.render();
-                }
+            window.addEventListener('resize', function() {
+                engine.resize();
+                
+                document.documentElement.style.setProperty('--dummy', 'none');
+                setTimeout(() => {
+                    document.documentElement.style.removeProperty('--dummy');
+                }, 0);
             });
-        });
 
-        // Watch for browser/canvas resize events
-        window.addEventListener("resize", function () {
-            engine.resize();
+            if ('ondeviceinfochange' in window) {
+                window.addEventListener('deviceinfochange', function() {
+                    document.documentElement.style.setProperty('--dummy', 'none');
+                    setTimeout(() => {
+                        document.documentElement.style.removeProperty('--dummy');
+                    }, 0);
+                });
+            }
         });
-
     </script>
-    
 </body>
 </html>
