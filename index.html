@@ -1047,15 +1047,24 @@
                     };
                 }
 
-                // ... existing code ...
 
                 // Add marker update function
                 function updateMarkerPositions() {
+                    // Add checks for scene readiness
+                    if (!scene.isReady() || !camera.position.length() || !hasCompletedInitialAnimation) {
+                        return;
+                    }
+                    
                     const markersContainer = document.getElementById('markersContainer');
                     const meshes = scene.meshes;
                     
                     // Only proceed if there's an active button
                     if (activeButton) {
+                        // Get the canvas dimensions each time to ensure correct scaling
+                        const canvasRect = canvas.getBoundingClientRect();
+                        const renderWidth = canvasRect.width;
+                        const renderHeight = canvasRect.height;
+
                         // Extract the mesh name from the active button's src
                         const activeMeshName = activeButton.dataset.activeSrc
                             .split('/')
@@ -1143,6 +1152,24 @@
                             markersContainer.innerHTML = '';
                         }, 300); // Match the transition duration
                     }
+                }
+
+                // Update the get2DCoordinates function to use current canvas dimensions
+                function get2DCoordinates(mesh, scene, camera) {
+                    const worldPosition = mesh.getAbsolutePosition();
+                    const canvasRect = canvas.getBoundingClientRect();
+                    
+                    const screenCoordinates = BABYLON.Vector3.Project(
+                        worldPosition,
+                        BABYLON.Matrix.Identity(),
+                        scene.getTransformMatrix(),
+                        camera.viewport.toGlobal(canvasRect.width, canvasRect.height)
+                    );
+                    
+                    return {
+                        x: screenCoordinates.x,
+                        y: screenCoordinates.y
+                    };
                 }
 
                 // ... rest of the code ...
