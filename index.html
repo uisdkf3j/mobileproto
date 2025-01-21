@@ -246,6 +246,41 @@
             display: none; /* Initially hidden */
         }
 
+        #section3 .photo-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #section3 .photo-overlay img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            position: relative;
+            top: 0;
+            left: 0;
+            z-index: 11;
+        }
+
+        /* Update the markers container styles */
+        #markersContainer img {
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+
+
         /* Section 4 styles */
         #section4 {
             background-color: #ffffff;
@@ -289,6 +324,8 @@
 
         <!-- Section 3: 3D Viewer -->
         <section id="section3">
+            <!-- Add this new container for markers -->
+            <div id="markersContainer" style="position: absolute; top: 0; left: 0; width: 112px; height: 198px; margin-top: -112px; pointer-events: none; z-index: 3;"></div> 
             <!-- 3D rendering canvas and interaction overlay -->
             <canvas id="renderCanvas"></canvas>
             <div id="dragOverlay"></div>
@@ -414,6 +451,21 @@
                 buttons.forEach(button => {
                     button.addEventListener('click', function() {
                         console.log('Room button clicked:', this.alt);
+
+                            // Clear existing markers before proceeding
+                        const markersContainer = document.getElementById('markersContainer');
+                        const markers = markersContainer.querySelectorAll('img');
+                        markers.forEach(marker => {
+                            marker.style.transform = 'translate(-50%, -50%) scale(0)';
+                            marker.style.opacity = '0';
+                        });
+                        
+                        // Remove markers after animation completes
+                        setTimeout(() => {
+                            markersContainer.innerHTML = '';
+                        }, 300);
+
+
                         if (activeButton === this) {
                             // Deactivate current button
                             console.log('Deactivating current button:', this.alt);
@@ -694,8 +746,20 @@
                         const buttonContainer = meshName.startsWith('0_') ? groundFloorButtons : firstFloorButtons;
                         const matchingButton = buttonContainer.querySelector(`[data-active-src*="${meshName}_active"]`);
                         
-                            // ... existing code ...
+                            
                         if (matchingButton) {
+                              // Animate out existing markers before switching
+                            const markersContainer = document.getElementById('markersContainer');
+                            const markers = markersContainer.querySelectorAll('img');
+                            markers.forEach(marker => {
+                                marker.style.transform = 'translate(-50%, -50%) scale(0)';
+                                marker.style.opacity = '0';
+                            });
+                            
+                            // Clear markers after animation
+                            setTimeout(() => {
+                                markersContainer.innerHTML = '';
+                            }, 300);
                             // Deactivate current active button if exists
                             if (activeButton) {
                                 activeButton.src = activeButton.dataset.inactiveSrc;
@@ -721,7 +785,7 @@
                                 pickResult.pickedMesh.position.y,
                                 pickResult.pickedMesh.position.z
                             );
-                        // ... existing code ...
+                       
                             
                             // Animate camera to room view
                             BABYLON.Animation.CreateAndStartAnimation(
@@ -967,6 +1031,132 @@
                         }
                     }
                 });
+
+                // Add this function to convert 3D position to 2D screen coordinates
+                function get2DCoordinates(mesh, scene, camera) {
+                    const worldPosition = mesh.getAbsolutePosition();
+                    const screenCoordinates = BABYLON.Vector3.Project(
+                        worldPosition,
+                        BABYLON.Matrix.Identity(),
+                        scene.getTransformMatrix(),
+                        camera.viewport.toGlobal(engine.getRenderWidth(), engine.getRenderHeight())
+                    );
+                    return {
+                        x: screenCoordinates.x,
+                        y: screenCoordinates.y
+                    };
+                }
+
+                // ... existing code ...
+
+                // Add marker update function
+                function updateMarkerPositions() {
+                    const markersContainer = document.getElementById('markersContainer');
+                    const meshes = scene.meshes;
+                    
+                    // Only proceed if there's an active button
+                    if (activeButton) {
+                        // Extract the mesh name from the active button's src
+                        const activeMeshName = activeButton.dataset.activeSrc
+                            .split('/')
+                            .pop()
+                            .replace('_active.png', '');
+                        
+                        meshes.forEach(mesh => {
+                            if (mesh.name === activeMeshName) {
+                                // Instead of using the parent mesh, iterate through its children
+                                mesh.getChildren().forEach(childMesh => {
+                                    const markerName = childMesh.name;  // The child mesh name directly corresponds to marker/photo name
+                                    const coords = get2DCoordinates(childMesh, scene, camera);
+                                    
+                                    // Create marker element if it's in front of the camera
+                                    if (coords.x >= 0 && coords.x <= engine.getRenderWidth() && 
+                                        coords.y >= 0 && coords.y <= engine.getRenderHeight()) {
+                                        // Check if marker already exists
+                                        let marker = markersContainer.querySelector(`[data-mesh="${childMesh.name}"]`);
+                                        
+                                        if (!marker) {
+                                            marker = document.createElement('img');
+                                            marker.src = `./UI/${markerName}.png`;  // Use child mesh name directly for marker image
+                                            marker.dataset.mesh = childMesh.name;
+                                            marker.style.position = 'absolute';
+                                            marker.style.left = `${coords.x}px`;
+                                            marker.style.top = `${coords.y}px`;
+                                            marker.style.transform = 'translate(-50%, -50%) scale(0)';
+                                            marker.style.opacity = '0';
+                                            marker.style.transition = 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease';
+                                            marker.style.pointerEvents = 'auto';
+
+                                            // Add tap handler for the marker
+                                            marker.addEventListener('click', (e) => {
+                                                e.stopPropagation();
+                                                const meshName = marker.dataset.mesh;
+                                                
+                                                // Create fullscreen image overlay
+                                                const overlay = document.createElement('div');
+                                                overlay.className = 'photo-overlay';
+                                                
+                                                const image = document.createElement('img');
+                                                image.src = `./UI/photos/${meshName}.jpg`;  // Use child mesh name for photo
+                                                
+                                                overlay.appendChild(image);
+                                                document.getElementById('section3').appendChild(overlay);
+                                                
+                                                requestAnimationFrame(() => {
+                                                    overlay.style.opacity = '1';
+                                                });
+                                                
+                                                overlay.addEventListener('click', () => {
+                                                    overlay.style.opacity = '0';
+                                                    setTimeout(() => {
+                                                        overlay.remove();
+                                                    }, 300);
+                                                });
+                                            });
+
+                                            markersContainer.appendChild(marker);
+
+                                            setTimeout(() => {
+                                                marker.style.transform = 'translate(-50%, -50%) scale(1)';
+                                                marker.style.opacity = '1';
+                                            }, 0);
+                                        } else {
+                                            // Update position of existing marker
+                                            marker.style.left = `${coords.x}px`;
+                                            marker.style.top = `${coords.y}px`;
+                                        }
+                                    }
+                                });
+                            }
+                        });
+
+                    } else {
+                        // When deselecting, animate out all markers before removing
+                        const markers = markersContainer.querySelectorAll('img');
+                        markers.forEach(marker => {
+                            marker.style.transform = 'translate(-50%, -50%) scale(0)';
+                            marker.style.opacity = '0';
+                        });
+                        
+                        // Remove markers after animation completes
+                        setTimeout(() => {
+                            markersContainer.innerHTML = '';
+                        }, 300); // Match the transition duration
+                    }
+                }
+
+                // ... rest of the code ...
+
+                // Update marker positions on each frame
+                scene.onBeforeRenderObservable.add(() => {
+                    if (hasCompletedInitialAnimation) {
+                        updateMarkerPositions();
+                    }
+                    
+                    // ... existing inertia code ...
+                });
+
+
 
                 return scene;
             }
