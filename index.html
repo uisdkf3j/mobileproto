@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -435,7 +436,7 @@
                             30,
                             7,
                             camera.radius,
-                            15,
+                            20,
                             BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                         );
                         
@@ -495,7 +496,7 @@
                                     30,
                                     7,
                                     camera.radius,
-                                    15,
+                                    20,
                                     BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                                 );
                             } else {
@@ -542,28 +543,28 @@
                                 
                                 // Set camera radius based on the room
                                 const radiusMap = {
-                                    "0_garage": 6,
-                                    "0_landing": 5,
-                                    "0_room1": 4,
-                                    "0_room2": 4,
-                                    "0_room3": 4.5,
-                                    "0_room4": 5,
-                                    "0_room5": 4,
-                                    "0_utilityroom": 4,
-                                    "0_wc": 3,
-                                    "1_bathroom1": 3.5,
-                                    "1_bathroom2": 3.5,
-                                    "1_kitchen": 6,
-                                    "1_landing": 4.5,
-                                    "1_room1": 4.5,
-                                    "1_room2": 4,
-                                    "1_room3": 4,
-                                    "1_sunroom": 4.5,
-                                    "1_terrace": 6,
-                                    "1_wardrobe": 3,
-                                    "1_wc": 3
+                                    "0_garage": 9,
+                                    "0_landing": 7,
+                                    "0_room1": 6,
+                                    "0_room2": 6,
+                                    "0_room3": 6.5,
+                                    "0_room4": 7,
+                                    "0_room5": 6,
+                                    "0_utilityroom": 6,
+                                    "0_wc": 5,
+                                    "1_bathroom1": 4.5,
+                                    "1_bathroom2": 4.5,
+                                    "1_kitchen": 8,
+                                    "1_landing": 6.5,
+                                    "1_room1": 6.5,
+                                    "1_room2": 6,
+                                    "1_room3": 6,
+                                    "1_sunroom": 6.5,
+                                    "1_terrace": 8,
+                                    "1_wardrobe": 5,
+                                    "1_wc": 5
                                 };
-                                const targetRadius = radiusMap[meshName] || 15;
+                                const targetRadius = radiusMap[meshName] || 20;
                                 BABYLON.Animation.CreateAndStartAnimation(
                                     "cameraRadiusRoom",
                                     camera,
@@ -801,28 +802,28 @@
                             
                             // Set camera radius based on the room
                             const radiusMap = {
-                                "0_garage": 6,
-                                "0_landing": 5,
-                                "0_room1": 4,
-                                "0_room2": 4,
-                                "0_room3": 4.5,
-                                "0_room4": 5,
-                                "0_room5": 4,
-                                "0_utilityroom": 4,
-                                "0_wc": 3,
-                                "1_bathroom1": 3.5,
-                                "1_bathroom2": 3.5,
-                                "1_kitchen": 6,
-                                "1_landing": 4.5,
-                                "1_room1": 4.5,
-                                "1_room2": 4,
-                                "1_room3": 4,
-                                "1_sunroom": 4.5,
-                                "1_terrace": 6,
-                                "1_wardrobe": 3,
-                                "1_wc": 3
-                            };
-                            const targetRadius = radiusMap[meshName] || 15;
+                                    "0_garage": 9,
+                                    "0_landing": 7,
+                                    "0_room1": 6,
+                                    "0_room2": 6,
+                                    "0_room3": 6.5,
+                                    "0_room4": 7,
+                                    "0_room5": 6,
+                                    "0_utilityroom": 6,
+                                    "0_wc": 5,
+                                    "1_bathroom1": 4.5,
+                                    "1_bathroom2": 4.5,
+                                    "1_kitchen": 8,
+                                    "1_landing": 6.5,
+                                    "1_room1": 6.5,
+                                    "1_room2": 6,
+                                    "1_room3": 6,
+                                    "1_sunroom": 6.5,
+                                    "1_terrace": 8,
+                                    "1_wardrobe": 5,
+                                    "1_wc": 5
+                                };
+                            const targetRadius = radiusMap[meshName] || 20;
                             
                             BABYLON.Animation.CreateAndStartAnimation(
                                 "cameraRadiusRoom",
