@@ -392,6 +392,35 @@
             const groundFloorButtons = document.getElementById('groundFloorButtons');
             const backButton = document.querySelector('.back-button');
             
+            const roomToWallMapping = {
+                // First floor mappings
+                "1_room1": "walls_firstfloor_primitive1",
+                "1_room2": "walls_firstfloor_primitive2",
+                "1_room3": "walls_firstfloor_primitive3",
+                "1_kitchen": "walls_firstfloor_primitive4",
+                "1_bathroom1": "walls_firstfloor_primitive5",
+                "1_bathroom2": "walls_firstfloor_primitive6",
+                "1_landing": "walls_firstfloor_primitive7",
+                "1_sunroom": "walls_firstfloor_primitive8",
+                "1_terrace": "walls_firstfloor_primitive9",
+                "1_wardrobe": "walls_firstfloor_primitive10",
+                "1_wc": "walls_firstfloor_primitive11",
+                
+                // Ground floor mappings
+                "0_room1": "walls_groundfloor_primitive1",
+                "0_room2": "walls_groundfloor_primitive2",
+                "0_room3": "walls_groundfloor_primitive3",
+                "0_room4": "walls_groundfloor_primitive4",
+                "0_room5": "walls_groundfloor_primitive5",
+                "0_garage": "walls_groundfloor_primitive6",
+                "0_landing": "walls_groundfloor_primitive7",
+                "0_utilityroom": "walls_groundfloor_primitive8",
+                "0_wc": "walls_groundfloor_primitive9"
+            };
+
+
+
+
             // State variables
             let activeButton = null;
             let groundFloorMesh; 
@@ -403,6 +432,14 @@
             // Back button click handler
             backButton.addEventListener('click', function() {
                 console.log('Back button clicked');
+                
+                // Reset all mesh materials
+                scene.meshes.forEach(mesh => {
+                    if (mesh.material) {
+                        mesh.material.setInt("isHighlighted", 0);
+                    }
+                });
+
                 if (activeButton) {
                     console.log('Deactivating button:', activeButton.alt);
                     activeButton.src = activeButton.dataset.inactiveSrc;
@@ -411,13 +448,7 @@
                     arrowButton.style.display = 'block';
                     
                     const targetMesh = isGroundFloorView ? groundFloorMesh : firstFloorMesh;
-                    if (targetMesh) {
-                        console.log('Target mesh position:', {
-                            x: targetMesh.position.x,
-                            y: targetMesh.position.y,
-                            z: targetMesh.position.z
-                        });
-                        
+                    if (targetMesh) {                        
                         // Animate camera back to floor view
                         BABYLON.Animation.CreateAndStartAnimation(
                             "cameraTargetRoom",
@@ -439,10 +470,9 @@
                             20,
                             BABYLON.Animation.ANIMATIONLOOPMODE_CONSTANT
                         );
-                        
-                     }
                     } else {
                         console.warn('Target mesh not found for camera reset');
+                    }
                 }
             });
 
@@ -453,7 +483,7 @@
                     button.addEventListener('click', function() {
                         console.log('Room button clicked:', this.alt);
 
-                            // Clear existing markers before proceeding
+                        // Clear existing markers before proceeding
                         const markersContainer = document.getElementById('markersContainer');
                         const markers = markersContainer.querySelectorAll('img');
                         markers.forEach(marker => {
@@ -466,6 +496,12 @@
                             markersContainer.innerHTML = '';
                         }, 300);
 
+                        // Reset all mesh materials
+                        scene.meshes.forEach(mesh => {
+                            if (mesh.material) {
+                                mesh.material.setInt("isHighlighted", 0);
+                            }
+                        });
 
                         if (activeButton === this) {
                             // Deactivate current button
@@ -518,6 +554,16 @@
                             const imgSrc = this.src;
                             const meshName = imgSrc.split('/').pop().split('_active.png')[0];
                             console.log('Looking for mesh with name:', meshName);
+
+                            // Find and highlight the corresponding wall primitive
+                            const wallPrimitiveName = roomToWallMapping[meshName];
+                            if (wallPrimitiveName) {
+                                const wallMesh = scene.getMeshByName(wallPrimitiveName);
+                                if (wallMesh && wallMesh.material) {
+                                    console.log('Highlighting wall mesh:', wallMesh.name);
+                                    wallMesh.material.setInt("isHighlighted", 1);
+                                }
+                            }
                             
                             const targetMesh = scene.getMeshByName(meshName);
                             if (targetMesh) {
@@ -743,6 +789,23 @@
                         const meshName = pickResult.pickedMesh.name;
                         console.log("Clicked mesh:", meshName);
 
+                        // Reset all mesh materials
+                        scene.meshes.forEach(mesh => {
+                            if (mesh.material) {
+                                mesh.material.setInt("isHighlighted", 0);
+                            }
+                        });
+
+                        // Find and highlight the corresponding wall primitive
+                        const wallPrimitiveName = roomToWallMapping[meshName];
+                        if (wallPrimitiveName) {
+                            const wallMesh = scene.getMeshByName(wallPrimitiveName);
+                            if (wallMesh && wallMesh.material) {
+                                console.log('Highlighting wall mesh:', wallMesh.name);
+                                wallMesh.material.setInt("isHighlighted", 1);
+                            }
+                        }
+
                         // Find and activate corresponding room button
                         const buttonContainer = meshName.startsWith('0_') ? groundFloorButtons : firstFloorButtons;
                         const matchingButton = buttonContainer.querySelector(`[data-active-src*="${meshName}_active"]`);
@@ -908,8 +971,10 @@
                     attribute vec3 normal;
                     uniform mat4 worldViewProjection;
                     varying vec3 vNormal;
+                    varying vec3 vPosition;
                     void main(void) {
                         vNormal = normal;
+                        vPosition = position;
                         gl_Position = worldViewProjection * vec4(position, 1.0);
                     }
                 `;
@@ -917,12 +982,19 @@
                 BABYLON.Effect.ShadersStore["customFragmentShader"] = `
                     precision highp float;
                     varying vec3 vNormal;
+                    varying vec3 vPosition;
+                    uniform vec3 highlightColor;
+                    uniform bool isHighlighted;
                     void main(void) {
                         vec3 normalizedNormal = normalize(vNormal);
                         if (normalizedNormal.y > 0.9) {
                             gl_FragColor = vec4(0.122, 0.106, 0.075, 1.0);
                         } else {
-                            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+                            if (isHighlighted) {
+                                gl_FragColor = vec4(highlightColor, 1.0);
+                            } else {
+                                gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+                            }
                         }
                     }
                 `;
@@ -936,26 +1008,33 @@
                     },
                     {
                         attributes: ["position", "normal"],
-                        uniforms: ["worldViewProjection"]
+                        uniforms: ["worldViewProjection", "highlightColor", "isHighlighted"]
                     }
                 );
 
+                // Set default values for the uniforms
+                shaderMaterial.setVector3("highlightColor", new BABYLON.Vector3(1.0, 0.788, 0.0)); // #FFC900
+                shaderMaterial.setInt("isHighlighted", 0);
                 BABYLON.SceneLoader.ImportMeshAsync("", "./3D/", "firstfloor.glb", scene).then(function (result) {
                     console.log("First floor model loaded successfully");
                     firstFloorMesh = result.meshes[0];
+                      
                     
                     result.meshes.forEach(mesh => {
                         if (mesh.name.startsWith('1_')) {
                             mesh.visibility = 0;
                         }
-                        mesh.material = shaderMaterial;
+                        // Create a unique material instance for each mesh
+                        const meshMaterial = shaderMaterial.clone("shader_" + mesh.name);
+                        mesh.material = meshMaterial;
                         mesh.enableEdgesRendering();
-                        mesh.edgesWidth = mesh.name === "GroundFloor_primitive10" ? 2.0 : 2.0;
+                        mesh.edgesWidth = 2.7;
                         mesh.edgesColor = new BABYLON.Color4(0.121, 0.106, 0.075, 1);
                     });
                 }).catch(function(error) {
                     console.error("Error loading first floor model:", error);
                 });
+
 
                 BABYLON.SceneLoader.ImportMeshAsync("", "./3D/", "groundfloor.glb", scene).then(function (result) {
                     console.log("Ground floor model loaded successfully");
@@ -967,9 +1046,11 @@
                         if (mesh.name.startsWith('0_')) {
                             mesh.visibility = 0;
                         }
-                        mesh.material = shaderMaterial;
+                        const meshMaterial = shaderMaterial.clone("shader_" + mesh.name);
+                        mesh.material = meshMaterial;
                         mesh.enableEdgesRendering();
-                        mesh.edgesWidth = mesh.name === "GroundFloor_primitive10" ? 2.0 : 2.0;
+                        mesh.edgesWidth = 2.7
+                        //mesh.edgesWidth = mesh.name === "GroundFloor_primitive10" ? 2.0 : 2.0;
                         mesh.edgesColor = new BABYLON.Color4(0.121, 0.106, 0.075, 1);
                     });
                     
